@@ -124,6 +124,10 @@ export type AppState = {
   selectedReciter: string;
   /** Total Quran milestone XP earned (separate from regular XP) */
   quranMilestoneXP: number;
+  /** Last surah number being read in Quran page */
+  quranLastSurah: number;
+  /** Last ayah position in that surah */
+  quranLastAyah: number;
 };
 
 export type Action =
@@ -176,7 +180,8 @@ export type Action =
   | { type: 'SET_QURAN_MEMORIZE_DONE'; done: boolean }
   | { type: 'SET_QURAN_LISTEN_DONE'; done: boolean }
   | { type: 'SET_SELECTED_RECITER'; reciter: string }
-  | { type: 'ADD_QURAN_MILESTONE_XP'; xp: number };
+  | { type: 'ADD_QURAN_MILESTONE_XP'; xp: number }
+  | { type: 'SET_QURAN_POSITION'; surah: number; ayah: number };
 
 const STORAGE_KEY = 'yomy-ramadan-state';
 
@@ -257,6 +262,8 @@ export function defaultState(): AppState {
     quranListenDone: false,
     selectedReciter: 'mishary',
     quranMilestoneXP: 0,
+    quranLastSurah: 1,
+    quranLastAyah: 0,
   };
 }
 
@@ -455,6 +462,8 @@ function loadState(): AppState | null {
       quranListenDone: typeof parsed.quranListenDone === 'boolean' ? parsed.quranListenDone : def.quranListenDone,
       selectedReciter: typeof parsed.selectedReciter === 'string' ? parsed.selectedReciter : def.selectedReciter,
       quranMilestoneXP: typeof parsed.quranMilestoneXP === 'number' ? parsed.quranMilestoneXP : def.quranMilestoneXP,
+      quranLastSurah: typeof parsed.quranLastSurah === 'number' ? parsed.quranLastSurah : def.quranLastSurah,
+      quranLastAyah: typeof parsed.quranLastAyah === 'number' ? parsed.quranLastAyah : def.quranLastAyah,
     };
   } catch {
     return null;
@@ -713,6 +722,8 @@ export function reducer(s: AppState, a: Action): AppState {
       return { ...s, selectedReciter: a.reciter };
     case 'ADD_QURAN_MILESTONE_XP':
       return { ...s, quranMilestoneXP: s.quranMilestoneXP + a.xp };
+    case 'SET_QURAN_POSITION':
+      return { ...s, quranLastSurah: a.surah, quranLastAyah: a.ayah };
     default:
       return s;
   }

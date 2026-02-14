@@ -294,6 +294,74 @@ export function isAzanPlaying(): boolean {
   return currentAudio !== null && !currentAudio.paused;
 }
 
+/* ─── Quran API (alquran.cloud — free, no key, Hafs/Uthmani) ─── */
+
+const QURAN_API = 'https://api.alquran.cloud/v1';
+const QURAN_CACHE_PREFIX = 'yomy-quran-';
+
+export type QuranAyah = {
+  number: number;
+  text: string;
+  numberInSurah: number;
+};
+
+function getCachedSurah(num: number): QuranAyah[] | null {
+  try {
+    const raw = localStorage.getItem(QURAN_CACHE_PREFIX + num);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function cacheSurah(num: number, ayahs: QuranAyah[]): void {
+  try {
+    localStorage.setItem(QURAN_CACHE_PREFIX + num, JSON.stringify(ayahs));
+  } catch { /* ignore quota */ }
+}
+
+/** Check if a surah is cached locally */
+export function isSurahCached(num: number): boolean {
+  return getCachedSurah(num) !== null;
+}
+
+/** Fetch surah text (Hafs/Uthmani) from API with local cache. Returns null on error/offline. */
+export async function fetchSurahText(surahNum: number): Promise<QuranAyah[] | null> {
+  const cached = getCachedSurah(surahNum);
+  if (cached) return cached;
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
+  try {
+    const res = await fetch(`${QURAN_API}/surah/${surahNum}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const ayahs = data?.data?.ayahs;
+    if (!Array.isArray(ayahs)) return null;
+    const cleaned: QuranAyah[] = ayahs.map((a: { number: number; text: string; numberInSurah: number }) => ({
+      number: a.number,
+      text: a.text,
+      numberInSurah: a.numberInSurah,
+    }));
+    cacheSurah(surahNum, cleaned);
+    return cleaned;
+  } catch {
+    return getCachedSurah(surahNum);
+  }
+}
+
+/** React hook: track online status */
+export function useOnlineStatus(): boolean {
+  const [online, setOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+  return online;
+}
+
 /** React hook: one hadith for Subha "dhikr hadiths" carousel. Fetches by index from Forty Hadith Nawawi (1–42), fallback to local list. */
 export function useDhikrHadith(
   hadithIdx: number,

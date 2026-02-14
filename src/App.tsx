@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { IonApp, IonTabs, IonTabBar, IonTabButton, IonLabel, IonRouterOutlet, IonIcon } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Route, Redirect, useHistory } from 'react-router-dom';
-import { home, ellipse, documentText, moon, barChart, settings, time } from 'ionicons/icons';
+import { home, ellipse, time, book, grid } from 'ionicons/icons';
 import { ThemeProvider, useTheme, useIsDark, useThemeMode } from './context/ThemeContext';
 import type { ThemeMode } from './context/ThemeContext';
 import { Star } from './components/Star';
@@ -21,6 +21,8 @@ const Notes = lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes }
 const Motivation = lazy(() => import('./pages/Motivation').then(m => ({ default: m.Motivation })));
 const Weekly = lazy(() => import('./pages/Weekly').then(m => ({ default: m.Weekly })));
 const Salah = lazy(() => import('./pages/Salah').then(m => ({ default: m.Salah })));
+const QuranPage = lazy(() => import('./pages/Quran').then(m => ({ default: m.Quran })));
+const MorePage = lazy(() => import('./pages/More').then(m => ({ default: m.More })));
 
 /* ─── Beautiful 3-way theme switcher ─── */
 const THEME_OPTIONS: { mode: ThemeMode; icon: string; label: string }[] = [
@@ -234,6 +236,8 @@ function AppContent() {
             <Route path="/home" render={() => <Suspense fallback={<PageLoader />}><Home state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/subha" render={() => <Suspense fallback={<PageLoader />}><Subha state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/salah" render={() => <Suspense fallback={<PageLoader />}><Salah state={state} dispatch={dispatch} /></Suspense>} />
+            <Route path="/quran" render={() => <Suspense fallback={<PageLoader />}><QuranPage state={state} dispatch={dispatch} /></Suspense>} />
+            <Route path="/more" render={() => <Suspense fallback={<PageLoader />}><MorePage /></Suspense>} />
             <Route path="/notes" render={() => <Suspense fallback={<PageLoader />}><Notes state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/motivation" render={() => <Suspense fallback={<PageLoader />}><Motivation state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/weekly" render={() => <Suspense fallback={<PageLoader />}><Weekly state={state} dispatch={dispatch} /></Suspense>} />
@@ -252,6 +256,10 @@ function AppContent() {
               <IonIcon icon={home} />
               <IonLabel>يومي</IonLabel>
             </IonTabButton>
+            <IonTabButton tab="quran" href="/quran">
+              <IonIcon icon={book} />
+              <IonLabel>القرآن</IonLabel>
+            </IonTabButton>
             <IonTabButton tab="salah" href="/salah">
               <IonIcon icon={time} />
               <IonLabel>صلاتي</IonLabel>
@@ -260,21 +268,9 @@ function AppContent() {
               <IonIcon icon={ellipse} />
               <IonLabel>سُبحة</IonLabel>
             </IonTabButton>
-            <IonTabButton tab="notes" href="/notes">
-              <IonIcon icon={documentText} />
-              <IonLabel>دفتر</IonLabel>
-            </IonTabButton>
-            <IonTabButton tab="motivation" href="/motivation">
-              <IonIcon icon={moon} />
-              <IonLabel>تحفيز</IonLabel>
-            </IonTabButton>
-            <IonTabButton tab="weekly" href="/weekly">
-              <IonIcon icon={barChart} />
-              <IonLabel>تقرير</IonLabel>
-            </IonTabButton>
-            <IonTabButton tab="setup" href="/setup">
-              <IonIcon icon={settings} />
-              <IonLabel>إعداد</IonLabel>
+            <IonTabButton tab="more" href="/more">
+              <IonIcon icon={grid} />
+              <IonLabel>المزيد</IonLabel>
             </IonTabButton>
           </IonTabBar>
         </IonTabs>

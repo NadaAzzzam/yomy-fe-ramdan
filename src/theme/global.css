@@ -89,6 +89,11 @@ body {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ─── Ionic overrides for theme & responsive ─── */
 ion-app {
   --ion-background-color: transparent;

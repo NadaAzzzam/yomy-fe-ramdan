@@ -43,6 +43,18 @@ export type AppState = {
   lastSeenDate: string;
   /** Per-day completion history for weekly report; key = YYYY-MM-DD */
   dailyHistory: Record<string, DailySnapshot>;
+  /** Nawafel (sunnah prayers) done today — key is nafila id e.g. 'fajr_before_2' */
+  nawafelChecks: Record<string, boolean>;
+  /** Selected azan sound id */
+  selectedAzan: string;
+  /** Whether azan notifications are enabled */
+  azanEnabled: boolean;
+  /** City for prayer times API */
+  prayerCity: string;
+  /** Country for prayer times API */
+  prayerCountry: string;
+  /** Prayer time calculation method ID (Aladhan API) */
+  prayerMethod: number;
 };
 
 export type Action =
@@ -66,11 +78,17 @@ export type Action =
   | { type: 'SET_LAST_SEEN_DATE'; date: string }
   | { type: 'CLEAR_DAILY_HISTORY' }
   | { type: 'RESET_QURAN_PROGRESS' }
-  | { type: 'RESET_TODAY_READING' };
+  | { type: 'RESET_TODAY_READING' }
+  | { type: 'TOGGLE_NAFILA'; key: string }
+  | { type: 'SET_SELECTED_AZAN'; id: string }
+  | { type: 'SET_AZAN_ENABLED'; enabled: boolean }
+  | { type: 'SET_PRAYER_LOCATION'; city: string; country: string }
+  | { type: 'SET_PRAYER_METHOD'; method: number }
+  | { type: 'RESET_APP' };
 
 const STORAGE_KEY = 'yomy-ramadan-state';
 
-function defaultState(): AppState {
+export function defaultState(): AppState {
   return {
     dailyPages: 20,
     readingTimes: [
@@ -116,6 +134,12 @@ function defaultState(): AppState {
     remindersEnabled: true,
     lastSeenDate: '',
     dailyHistory: {},
+    nawafelChecks: {},
+    selectedAzan: 'mishary',
+    azanEnabled: false,
+    prayerCity: 'Cairo',
+    prayerCountry: 'Egypt',
+    prayerMethod: 5,
   };
 }
 
@@ -233,6 +257,19 @@ function loadState(): AppState | null {
         }
         return out;
       })(),
+      nawafelChecks: (() => {
+        if (!isPlainObject(parsed.nawafelChecks)) return def.nawafelChecks;
+        const out: Record<string, boolean> = {};
+        for (const k of Object.keys(parsed.nawafelChecks)) {
+          if (typeof parsed.nawafelChecks[k] === 'boolean') out[k] = parsed.nawafelChecks[k];
+        }
+        return out;
+      })(),
+      selectedAzan: typeof parsed.selectedAzan === 'string' ? parsed.selectedAzan : def.selectedAzan,
+      azanEnabled: typeof parsed.azanEnabled === 'boolean' ? parsed.azanEnabled : def.azanEnabled,
+      prayerCity: typeof parsed.prayerCity === 'string' ? parsed.prayerCity : def.prayerCity,
+      prayerCountry: typeof parsed.prayerCountry === 'string' ? parsed.prayerCountry : def.prayerCountry,
+      prayerMethod: typeof parsed.prayerMethod === 'number' ? parsed.prayerMethod : def.prayerMethod,
     };
   } catch {
     return null;
@@ -388,6 +425,7 @@ export function reducer(s: AppState, a: Action): AppState {
         totalPagesEver: s.totalPagesEver + a.snapshot.pagesRead,
         streak: newStreak,
         bestStreak: Math.max(prevBest, newStreak),
+        nawafelChecks: {},
       };
     }
     case 'SET_LAST_SEEN_DATE':
@@ -411,6 +449,18 @@ export function reducer(s: AppState, a: Action): AppState {
         todaySlots: slots.map((slot) => ({ ...slot, done: false, pages: 0 })),
       };
     }
+    case 'TOGGLE_NAFILA':
+      return { ...s, nawafelChecks: { ...s.nawafelChecks, [a.key]: !s.nawafelChecks[a.key] } };
+    case 'SET_SELECTED_AZAN':
+      return { ...s, selectedAzan: a.id };
+    case 'SET_AZAN_ENABLED':
+      return { ...s, azanEnabled: a.enabled };
+    case 'SET_PRAYER_LOCATION':
+      return { ...s, prayerCity: a.city, prayerCountry: a.country };
+    case 'SET_PRAYER_METHOD':
+      return { ...s, prayerMethod: a.method };
+    case 'RESET_APP':
+      return defaultState();
     default:
       return s;
   }

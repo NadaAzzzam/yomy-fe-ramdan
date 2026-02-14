@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { IonApp, IonTabs, IonTabBar, IonTabButton, IonLabel, IonRouterOutlet, IonIcon } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Route, Redirect, useHistory } from 'react-router-dom';
-import { home, ellipse, documentText, moon, barChart, settings } from 'ionicons/icons';
+import { home, ellipse, documentText, moon, barChart, settings, time } from 'ionicons/icons';
 import { ThemeProvider, useTheme, useIsDark, useThemeMode } from './context/ThemeContext';
 import type { ThemeMode } from './context/ThemeContext';
 import { Star } from './components/Star';
@@ -19,6 +19,7 @@ const Subha = lazy(() => import('./pages/Subha').then(m => ({ default: m.Subha }
 const Notes = lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })));
 const Motivation = lazy(() => import('./pages/Motivation').then(m => ({ default: m.Motivation })));
 const Weekly = lazy(() => import('./pages/Weekly').then(m => ({ default: m.Weekly })));
+const Salah = lazy(() => import('./pages/Salah').then(m => ({ default: m.Salah })));
 
 /* ─── Beautiful 3-way theme switcher ─── */
 const THEME_OPTIONS: { mode: ThemeMode; icon: string; label: string }[] = [
@@ -218,13 +219,19 @@ function AppContent() {
     history.replace('/home');
   }, [dispatch, history]);
 
+  const onResetApp = useCallback(() => {
+    dispatch({ type: 'RESET_APP' });
+    history.replace('/');
+  }, [dispatch, history]);
+
   return (
     <IonApp style={{ backgroundColor: t.bg, color: t.text, transition: 'background-color .4s, color .4s' }}>
         <IonTabs>
           <IonRouterOutlet>
-            <Route path="/setup" render={() => <Suspense fallback={<PageLoader />}><Setup state={state} dispatch={dispatch} onFinish={onFinishSetup} /></Suspense>} />
+            <Route path="/setup" render={() => <Suspense fallback={<PageLoader />}><Setup state={state} dispatch={dispatch} onFinish={onFinishSetup} onResetApp={onResetApp} /></Suspense>} />
             <Route path="/home" render={() => <Suspense fallback={<PageLoader />}><Home state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/subha" render={() => <Suspense fallback={<PageLoader />}><Subha state={state} dispatch={dispatch} /></Suspense>} />
+            <Route path="/salah" render={() => <Suspense fallback={<PageLoader />}><Salah state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/notes" render={() => <Suspense fallback={<PageLoader />}><Notes state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/motivation" render={() => <Suspense fallback={<PageLoader />}><Motivation state={state} /></Suspense>} />
             <Route path="/weekly" render={() => <Suspense fallback={<PageLoader />}><Weekly state={state} dispatch={dispatch} /></Suspense>} />
@@ -242,6 +249,10 @@ function AppContent() {
             <IonTabButton tab="home" href="/home">
               <IonIcon icon={home} />
               <IonLabel>يومي</IonLabel>
+            </IonTabButton>
+            <IonTabButton tab="salah" href="/salah">
+              <IonIcon icon={time} />
+              <IonLabel>صلاتي</IonLabel>
             </IonTabButton>
             <IonTabButton tab="subha" href="/subha">
               <IonIcon icon={ellipse} />

@@ -5,6 +5,7 @@ import { Sec } from "../components/Sec";
 import { Ring } from "../components/Ring";
 import { useTheme } from "../context/ThemeContext";
 import { fontSans } from "../lib/theme";
+import { useDhikrHadith, formatHadithText } from "../lib/api";
 import type { AppState } from "../lib/state";
 import type { Action } from "../lib/state";
 import type { SubhaCounts } from "../lib/state";
@@ -153,6 +154,10 @@ export function Subha({ state, dispatch }: SubhaProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [pulse, setPulse] = useState(false);
   const [hadithIdx, setHadithIdx] = useState(0);
+  const { hadith: dhikrHadith, loading: dhikrHadithLoading } = useDhikrHadith(
+    hadithIdx,
+    DHIKR_HADITHS,
+  );
 
   const active = tasbihat[activeIdx]!;
   const count = state.subha[active.id] || 0;
@@ -177,7 +182,13 @@ export function Subha({ state, dispatch }: SubhaProps) {
       <IonContent
         fullscreen
         className="ion-padding"
-        style={{ fontFamily: fontSans, '--background': t.bg, color: t.text } as React.CSSProperties}
+        style={
+          {
+            fontFamily: fontSans,
+            "--background": t.bg,
+            color: t.text,
+          } as React.CSSProperties
+        }
       >
         <div className="ion-content-inner">
           <div style={{ textAlign: "center", padding: "12px 0 6px" }}>
@@ -557,29 +568,45 @@ export function Subha({ state, dispatch }: SubhaProps) {
                   minHeight: 100,
                 }}
               >
-                <p
-                  style={{
-                    fontFamily: "Amiri",
-                    fontSize: 14,
-                    color: t.text,
-                    lineHeight: 2,
-                    margin: 0,
-                    textAlign: "center",
-                    direction: "rtl",
-                  }}
-                >
-                  "{DHIKR_HADITHS[hadithIdx]!.text}"
-                </p>
-                <p
-                  style={{
-                    fontSize: 11,
-                    color: t.muted,
-                    margin: "10px 0 0",
-                    textAlign: "center",
-                  }}
-                >
-                  — {DHIKR_HADITHS[hadithIdx]!.source}
-                </p>
+                {dhikrHadithLoading ? (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: t.muted,
+                      margin: 0,
+                      textAlign: "center",
+                    }}
+                  >
+                    ...
+                  </p>
+                ) : (
+                  <>
+                    <p
+                      style={{
+                        fontFamily: "Amiri",
+                        fontSize: 14,
+                        color: t.text,
+                        lineHeight: 2,
+                        margin: 0,
+                        textAlign: "center",
+                        direction: "rtl",
+                        whiteSpace: "pre-line",
+                      }}
+                    >
+                      "{formatHadithText(dhikrHadith.text)}"
+                    </p>
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: t.muted,
+                        margin: "10px 0 0",
+                        textAlign: "center",
+                      }}
+                    >
+                      — {dhikrHadith.source}
+                    </p>
+                  </>
+                )}
               </div>
               <div
                 style={{
@@ -595,7 +622,7 @@ export function Subha({ state, dispatch }: SubhaProps) {
                   aria-label="حديث سابق"
                   onClick={() =>
                     setHadithIdx((i) =>
-                      i === 0 ? DHIKR_HADITHS.length - 1 : i - 1
+                      i === 0 ? DHIKR_HADITHS.length - 1 : i - 1,
                     )
                   }
                   style={{
@@ -634,8 +661,7 @@ export function Subha({ state, dispatch }: SubhaProps) {
                         height: 8,
                         borderRadius: 4,
                         border: "none",
-                        background:
-                          hadithIdx === i ? t.gold : `${t.gold}40`,
+                        background: hadithIdx === i ? t.gold : `${t.gold}40`,
                         cursor: "pointer",
                         transition: "all .2s",
                       }}
@@ -647,7 +673,7 @@ export function Subha({ state, dispatch }: SubhaProps) {
                   aria-label="حديث تالي"
                   onClick={() =>
                     setHadithIdx((i) =>
-                      i === DHIKR_HADITHS.length - 1 ? 0 : i + 1
+                      i === DHIKR_HADITHS.length - 1 ? 0 : i + 1,
                     )
                   }
                   style={{

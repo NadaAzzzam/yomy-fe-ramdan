@@ -97,6 +97,200 @@ export const DAILY_TIPS: string[] = [
   'اختم رمضان بأفضل ما فيك — خير الأعمال خواتيمها',
 ];
 
+/* ─── Nawafel (Sunnah Prayers) before/after each Salah ─── */
+
+export type NafilItem = {
+  id: string;
+  prayerKey: 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha';
+  prayerLabel: string;
+  prayerIcon: string;
+  label: string;
+  rakaat: number;
+  rakaatLabel: string;
+  type: 'before' | 'after';
+  importance: 'muakkadah' | 'mustahab';
+  importanceLabel: string;
+  hadith: string;
+  source: string;
+};
+
+/** The 5 prayers with their key and display info */
+export const SALAWAT = [
+  { key: 'fajr' as const, label: 'الفجر', icon: '🌅', color: 'orange' as const },
+  { key: 'dhuhr' as const, label: 'الظهر', icon: '☀️', color: 'gold' as const },
+  { key: 'asr' as const, label: 'العصر', icon: '🌤️', color: 'accent' as const },
+  { key: 'maghrib' as const, label: 'المغرب', icon: '🌅', color: 'orange' as const },
+  { key: 'isha' as const, label: 'العشاء', icon: '🌙', color: 'purple' as const },
+];
+
+/** All Nawafel (Sunnah) prayers — 12 rak'ahs مؤكدة + extras */
+export const NAWAFEL: NafilItem[] = [
+  {
+    id: 'fajr_before_2',
+    prayerKey: 'fajr',
+    prayerLabel: 'الفجر',
+    prayerIcon: '🌅',
+    label: 'ركعتان قبل الفجر',
+    rakaat: 2,
+    rakaatLabel: '٢ ركعات',
+    type: 'before',
+    importance: 'muakkadah',
+    importanceLabel: 'سنة مؤكدة',
+    hadith: 'ركعتا الفجر خيرٌ من الدنيا وما فيها',
+    source: 'رواه مسلم',
+  },
+  {
+    id: 'dhuhr_before_4',
+    prayerKey: 'dhuhr',
+    prayerLabel: 'الظهر',
+    prayerIcon: '☀️',
+    label: '٤ ركعات قبل الظهر',
+    rakaat: 4,
+    rakaatLabel: '٤ ركعات',
+    type: 'before',
+    importance: 'muakkadah',
+    importanceLabel: 'سنة مؤكدة',
+    hadith: 'من حافظ على أربع ركعات قبل الظهر وأربعٍ بعدها حرّمه الله على النار',
+    source: 'رواه أبو داود والترمذي',
+  },
+  {
+    id: 'dhuhr_after_2',
+    prayerKey: 'dhuhr',
+    prayerLabel: 'الظهر',
+    prayerIcon: '☀️',
+    label: 'ركعتان بعد الظهر',
+    rakaat: 2,
+    rakaatLabel: '٢ ركعات',
+    type: 'after',
+    importance: 'muakkadah',
+    importanceLabel: 'سنة مؤكدة',
+    hadith: 'من صلى اثنتي عشرة ركعة في يوم وليلة بُني له بيتٌ في الجنة',
+    source: 'رواه مسلم',
+  },
+  {
+    id: 'asr_before_4',
+    prayerKey: 'asr',
+    prayerLabel: 'العصر',
+    prayerIcon: '🌤️',
+    label: '٤ ركعات قبل العصر',
+    rakaat: 4,
+    rakaatLabel: '٤ ركعات',
+    type: 'before',
+    importance: 'mustahab',
+    importanceLabel: 'مستحبة',
+    hadith: 'رحم الله امرأً صلى قبل العصر أربعاً',
+    source: 'رواه أبو داود والترمذي',
+  },
+  {
+    id: 'maghrib_after_2',
+    prayerKey: 'maghrib',
+    prayerLabel: 'المغرب',
+    prayerIcon: '🌅',
+    label: 'ركعتان بعد المغرب',
+    rakaat: 2,
+    rakaatLabel: '٢ ركعات',
+    type: 'after',
+    importance: 'muakkadah',
+    importanceLabel: 'سنة مؤكدة',
+    hadith: 'من صلى اثنتي عشرة ركعة في يوم وليلة بُني له بيتٌ في الجنة',
+    source: 'رواه مسلم',
+  },
+  {
+    id: 'isha_after_2',
+    prayerKey: 'isha',
+    prayerLabel: 'العشاء',
+    prayerIcon: '🌙',
+    label: 'ركعتان بعد العشاء',
+    rakaat: 2,
+    rakaatLabel: '٢ ركعات',
+    type: 'after',
+    importance: 'muakkadah',
+    importanceLabel: 'سنة مؤكدة',
+    hadith: 'من صلى اثنتي عشرة ركعة في يوم وليلة بُني له بيتٌ في الجنة',
+    source: 'رواه مسلم',
+  },
+  {
+    id: 'witr',
+    prayerKey: 'isha',
+    prayerLabel: 'العشاء',
+    prayerIcon: '🌙',
+    label: 'صلاة الوتر',
+    rakaat: 3,
+    rakaatLabel: '١-٣ ركعات',
+    type: 'after',
+    importance: 'muakkadah',
+    importanceLabel: 'سنة مؤكدة',
+    hadith: 'اجعلوا آخر صلاتكم بالليل وتراً',
+    source: 'متفق عليه',
+  },
+];
+
+/** The 12 rak'ahs hadith for the progress tracker */
+export const TWELVE_RAKAHS_HADITH = {
+  text: 'من صلى اثنتي عشرة ركعة في يوم وليلة بُني له بيتٌ في الجنة: أربعاً قبل الظهر، وركعتين بعدها، وركعتين بعد المغرب، وركعتين بعد العشاء، وركعتين قبل صلاة الفجر',
+  source: 'رواه مسلم',
+};
+
+/* ─── Azan Sound Options ─── */
+
+export type AzanSound = {
+  id: string;
+  label: string;
+  reciter: string;
+  url: string;
+};
+
+/** Free Azan audio from Aladhan CDN (https://aladhan.com/play uses /audio/adhans/) */
+export const AZAN_SOUNDS: AzanSound[] = [
+  {
+    id: 'ahmad',
+    label: 'أذان أحمد النفيس',
+    reciter: 'أحمد النفيس',
+    url: 'https://cdn.aladhan.com/audio/adhans/a1.mp3',
+  },
+  {
+    id: 'turkey',
+    label: 'أذان حافظ مصطفى أوزجان',
+    reciter: 'تركيا',
+    url: 'https://cdn.aladhan.com/audio/adhans/a2.mp3',
+  },
+  {
+    id: 'dubai',
+    label: 'أذان دبي – مشاري العفاسي',
+    reciter: 'مشاري راشد العفاسي',
+    url: 'https://cdn.aladhan.com/audio/adhans/a4.mp3',
+  },
+  {
+    id: 'mishary',
+    label: 'مشاري العفاسي',
+    reciter: 'مشاري راشد العفاسي',
+    url: 'https://cdn.aladhan.com/audio/adhans/a7.mp3',
+  },
+  {
+    id: 'mishary_alt',
+    label: 'أذان آخر – مشاري العفاسي',
+    reciter: 'مشاري راشد العفاسي',
+    url: 'https://cdn.aladhan.com/audio/adhans/a9.mp3',
+  },
+  {
+    id: 'mansour',
+    label: 'أذان منصور الزهراني',
+    reciter: 'منصور الزهراني',
+    url: 'https://cdn.aladhan.com/audio/adhans/a11-mansour-al-zahrani.mp3',
+  },
+];
+
+/** Prayer time calculation methods (Aladhan API) */
+export const PRAYER_METHODS = [
+  { id: 5, label: 'الهيئة المصرية العامة للمساحة', region: 'مصر' },
+  { id: 4, label: 'جامعة أم القرى', region: 'السعودية' },
+  { id: 3, label: 'رابطة العالم الإسلامي', region: 'عام' },
+  { id: 2, label: 'الجمعية الإسلامية لأمريكا الشمالية', region: 'أمريكا' },
+  { id: 1, label: 'جامعة العلوم الإسلامية – كراتشي', region: 'باكستان' },
+  { id: 13, label: 'رئاسة الشؤون الدينية – تركيا', region: 'تركيا' },
+  { id: 8, label: 'منطقة الخليج', region: 'الخليج' },
+];
+
 /** Morning adhkar — brief daily reminders */
 export const MORNING_ADHKAR = [
   'أصبحنا وأصبح الملك لله',

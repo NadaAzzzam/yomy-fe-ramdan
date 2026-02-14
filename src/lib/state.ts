@@ -80,6 +80,9 @@ export type AppState = {
   prayerCountry: string;
   /** Prayer time calculation method ID (Aladhan API) */
   prayerMethod: number;
+  /** User location for prayer times (when set, overrides city/country) */
+  prayerLatitude: number | null;
+  prayerLongitude: number | null;
 
   /* ─── NEW FIELDS ─── */
   /** Today's heart feeling id */
@@ -128,6 +131,10 @@ export type AppState = {
   quranLastSurah: number;
   /** Last ayah position in that surah */
   quranLastAyah: number;
+  /** Last Mus'haf page viewed (1–604) — used to reopen at same page */
+  quranLastPage: number;
+  /** Page numbers viewed today in Quran (for dynamic reading count) */
+  todayQuranPagesViewed: number[];
 };
 
 export type Action =
@@ -157,6 +164,7 @@ export type Action =
   | { type: 'SET_SELECTED_AZAN'; id: string }
   | { type: 'SET_AZAN_ENABLED'; enabled: boolean }
   | { type: 'SET_PRAYER_LOCATION'; city: string; country: string }
+  | { type: 'SET_PRAYER_COORDS'; coords: { lat: number; lng: number } | null }
   | { type: 'SET_PRAYER_METHOD'; method: number }
   | { type: 'RESET_APP' }
   /* ─── NEW ACTIONS ─── */
@@ -181,7 +189,9 @@ export type Action =
   | { type: 'SET_QURAN_LISTEN_DONE'; done: boolean }
   | { type: 'SET_SELECTED_RECITER'; reciter: string }
   | { type: 'ADD_QURAN_MILESTONE_XP'; xp: number }
-  | { type: 'SET_QURAN_POSITION'; surah: number; ayah: number };
+  | { type: 'SET_QURAN_POSITION'; surah: number; ayah: number }
+  | { type: 'SET_QURAN_PAGE'; page: number }
+  | { type: 'ADD_QURAN_PAGE_VIEWED'; page: number };
 
 const STORAGE_KEY = 'yomy-ramadan-state';
 
@@ -236,10 +246,12 @@ export function defaultState(): AppState {
     dailyHistory: {},
     nawafelChecks: {},
     selectedAzan: 'mishary',
-    azanEnabled: false,
+    azanEnabled: true,
     prayerCity: 'Cairo',
     prayerCountry: 'Egypt',
     prayerMethod: 5,
+    prayerLatitude: null,
+    prayerLongitude: null,
     /* NEW DEFAULTS */
     heartFeeling: '',
     heartActionDone: false,
@@ -264,6 +276,8 @@ export function defaultState(): AppState {
     quranMilestoneXP: 0,
     quranLastSurah: 1,
     quranLastAyah: 0,
+    quranLastPage: 1,
+    todayQuranPagesViewed: [],
   };
 }
 
@@ -394,6 +408,14 @@ function loadState(): AppState | null {
       prayerCity: typeof parsed.prayerCity === 'string' ? parsed.prayerCity : def.prayerCity,
       prayerCountry: typeof parsed.prayerCountry === 'string' ? parsed.prayerCountry : def.prayerCountry,
       prayerMethod: typeof parsed.prayerMethod === 'number' ? parsed.prayerMethod : def.prayerMethod,
+      prayerLatitude:
+        typeof parsed.prayerLatitude === 'number' && Number.isFinite(parsed.prayerLatitude)
+          ? parsed.prayerLatitude
+          : def.prayerLatitude,
+      prayerLongitude:
+        typeof parsed.prayerLongitude === 'number' && Number.isFinite(parsed.prayerLongitude)
+          ? parsed.prayerLongitude
+          : def.prayerLongitude,
       /* NEW FIELDS */
       heartFeeling: typeof parsed.heartFeeling === 'string' ? parsed.heartFeeling : def.heartFeeling,
       heartActionDone: typeof parsed.heartActionDone === 'boolean' ? parsed.heartActionDone : def.heartActionDone,
@@ -464,6 +486,13 @@ function loadState(): AppState | null {
       quranMilestoneXP: typeof parsed.quranMilestoneXP === 'number' ? parsed.quranMilestoneXP : def.quranMilestoneXP,
       quranLastSurah: typeof parsed.quranLastSurah === 'number' ? parsed.quranLastSurah : def.quranLastSurah,
       quranLastAyah: typeof parsed.quranLastAyah === 'number' ? parsed.quranLastAyah : def.quranLastAyah,
+      quranLastPage:
+        typeof parsed.quranLastPage === 'number' && parsed.quranLastPage >= 1 && parsed.quranLastPage <= 604
+          ? parsed.quranLastPage
+          : def.quranLastPage,
+      todayQuranPagesViewed: Array.isArray(parsed.todayQuranPagesViewed)
+        ? parsed.todayQuranPagesViewed.filter((p: unknown) => typeof p === 'number' && p >= 1 && p <= 604)
+        : def.todayQuranPagesViewed,
     };
   } catch {
     return null;
@@ -495,7 +524,9 @@ export function buildDailySnapshot(s: AppState): DailySnapshot {
           const ps = Math.ceil(s.dailyPages / Math.max(1, s.readingTimes.length));
           return { ...t, done: match?.done ?? false, pages: match?.pages ?? ps };
         });
-  const tp = slots.reduce((sum, x) => sum + (x.done ? x.pages : 0), 0);
+  const slotPages = slots.reduce((sum, x) => sum + (x.done ? x.pages : 0), 0);
+  const viewedPages = s.todayQuranPagesViewed?.length ?? 0;
+  const tp = Math.max(slotPages, viewedPages);
   const dpct = Math.min(100, Math.round((tp / s.dailyPages) * 100));
   const ac = Object.entries(s.goals)
     .filter(([, v]) => v)
@@ -635,6 +666,7 @@ export function reducer(s: AppState, a: Action): AppState {
         quranReflectionDone: false,
         quranMemorizeDone: false,
         quranListenDone: false,
+        todayQuranPagesViewed: [],
       };
     }
     case 'SET_LAST_SEEN_DATE':
@@ -656,6 +688,7 @@ export function reducer(s: AppState, a: Action): AppState {
       return {
         ...s,
         todaySlots: slots.map((slot) => ({ ...slot, done: false, pages: 0 })),
+        todayQuranPagesViewed: [],
       };
     }
     case 'TOGGLE_NAFILA':
@@ -665,7 +698,13 @@ export function reducer(s: AppState, a: Action): AppState {
     case 'SET_AZAN_ENABLED':
       return { ...s, azanEnabled: a.enabled };
     case 'SET_PRAYER_LOCATION':
-      return { ...s, prayerCity: a.city, prayerCountry: a.country };
+      return { ...s, prayerCity: a.city, prayerCountry: a.country, prayerLatitude: null, prayerLongitude: null };
+    case 'SET_PRAYER_COORDS':
+      return {
+        ...s,
+        prayerLatitude: a.coords?.lat ?? null,
+        prayerLongitude: a.coords?.lng ?? null,
+      };
     case 'SET_PRAYER_METHOD':
       return { ...s, prayerMethod: a.method };
     case 'RESET_APP':
@@ -724,6 +763,14 @@ export function reducer(s: AppState, a: Action): AppState {
       return { ...s, quranMilestoneXP: s.quranMilestoneXP + a.xp };
     case 'SET_QURAN_POSITION':
       return { ...s, quranLastSurah: a.surah, quranLastAyah: a.ayah };
+    case 'SET_QURAN_PAGE':
+      return { ...s, quranLastPage: Math.max(1, Math.min(604, a.page)) };
+    case 'ADD_QURAN_PAGE_VIEWED': {
+      const page = Math.max(1, Math.min(604, a.page));
+      const viewed = s.todayQuranPagesViewed ?? [];
+      if (viewed.includes(page)) return s;
+      return { ...s, todayQuranPagesViewed: [...viewed, page] };
+    }
     default:
       return s;
   }

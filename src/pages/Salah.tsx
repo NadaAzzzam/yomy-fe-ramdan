@@ -20,6 +20,8 @@ import {
   playAzan,
   stopAzan,
   isAzanPlaying,
+  isAzanCached,
+  downloadAzanForOffline,
 } from '../lib/api';
 import type { AppState, Action } from '../lib/state';
 
@@ -239,6 +241,12 @@ function AzanSoundItem({
   const isDark = useIsDark();
   const [playing, setPlaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [cached, setCached] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    isAzanCached(sound.url).then(setCached);
+  }, [sound.url]);
 
   const handlePreview = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -252,13 +260,27 @@ function AzanSoundItem({
           setPlaying(true);
           audio.addEventListener('ended', () => setPlaying(false));
           audio.addEventListener('pause', () => setPlaying(false));
-          // Play full adhan until end; user can tap stop to end early
+          isAzanCached(sound.url).then(setCached);
         } else {
           setPlaying(false);
           setErrorMsg('لا يمكن تشغيل الصوت');
           setTimeout(() => setErrorMsg(null), 3000);
         }
       });
+    }
+  };
+
+  const handleDownloadOffline = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (cached || downloading) return;
+    setDownloading(true);
+    setErrorMsg(null);
+    const ok = await downloadAzanForOffline(sound.url);
+    setDownloading(false);
+    if (ok) setCached(true);
+    else {
+      setErrorMsg('فشل التحميل');
+      setTimeout(() => setErrorMsg(null), 3000);
     }
   };
 
@@ -322,8 +344,35 @@ function AzanSoundItem({
         </p>
         <p style={{ fontSize: 10, color: t.muted, margin: '2px 0 0' }}>
           {sound.reciter}
+          {cached && (
+            <span style={{ color: t.green ?? t.accent, marginRight: 4 }}> • متاح دون اتصال</span>
+          )}
         </p>
       </div>
+
+      {/* Download for offline */}
+      {!cached && (
+        <button
+          onClick={handleDownloadOffline}
+          disabled={downloading}
+          title="تحميل للاستخدام دون اتصال"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            border: 'none',
+            background: downloading ? t.muted + '20' : `${t.gold ?? t.accent}18`,
+            cursor: downloading ? 'wait' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            flexShrink: 0,
+          }}
+        >
+          {downloading ? '⏳' : '📥'}
+        </button>
+      )}
 
       {/* Preview / play button */}
       <button
@@ -371,16 +420,26 @@ function AzanSoundItem({
 export function Salah({ state, dispatch }: SalahProps) {
   const t = useTheme();
   const isDark = useIsDark();
+  const hasCoords =
+    state.prayerLatitude != null &&
+    state.prayerLongitude != null &&
+    Number.isFinite(state.prayerLatitude) &&
+    Number.isFinite(state.prayerLongitude);
+
   const { times, loading, error } = usePrayerTimes(
     state.prayerCity,
     state.prayerCountry,
     state.prayerMethod,
+    state.prayerLatitude,
+    state.prayerLongitude,
   );
 
   const [now, setNow] = useState(new Date());
   const [showLocationEdit, setShowLocationEdit] = useState(false);
   const [cityInput, setCityInput] = useState(state.prayerCity);
   const [countryInput, setCountryInput] = useState(state.prayerCountry);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // Update countdown every 30 seconds
   useEffect(() => {
@@ -429,6 +488,36 @@ export function Salah({ state, dispatch }: SalahProps) {
       dispatch({ type: 'SET_PRAYER_LOCATION', city: cityInput.trim(), country: countryInput.trim() });
       setShowLocationEdit(false);
     }
+  };
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('المتصفح لا يدعم الموقع');
+      setTimeout(() => setLocationError(null), 3000);
+      return;
+    }
+    setLocationError(null);
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocationLoading(false);
+        dispatch({
+          type: 'SET_PRAYER_COORDS',
+          coords: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+        });
+        setShowLocationEdit(false);
+      },
+      () => {
+        setLocationLoading(false);
+        setLocationError('لم نتمكن من الحصول على الموقع');
+        setTimeout(() => setLocationError(null), 4000);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 300000 }
+    );
+  };
+
+  const handleClearLocation = () => {
+    dispatch({ type: 'SET_PRAYER_COORDS', coords: null });
   };
 
   const prayerTimesData = times
@@ -491,7 +580,7 @@ export function Salah({ state, dispatch }: SalahProps) {
                   fontFamily: fontSans,
                 }}
               >
-                📍 {state.prayerCity}
+                {hasCoords ? '📍 موقعك الحالي' : `📍 ${state.prayerCity}`}
               </button>
             </div>
 
@@ -507,6 +596,56 @@ export function Salah({ state, dispatch }: SalahProps) {
                   animation: 'fadeIn .3s',
                 }}
               >
+                {hasCoords ? (
+                  <div style={{ marginBottom: 10 }}>
+                    <p style={{ fontSize: 11, color: t.muted, margin: '0 0 8px' }}>
+                      المواقيت حسب موقعك الحالي
+                    </p>
+                    <button
+                      onClick={handleClearLocation}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        border: `1px solid ${t.muted}40`,
+                        background: 'transparent',
+                        color: t.textSec,
+                        fontSize: 11,
+                        cursor: 'pointer',
+                        fontFamily: fontSans,
+                      }}
+                    >
+                      استخدام مدينة بدلاً
+                    </button>
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleUseMyLocation}
+                  disabled={locationLoading}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: locationLoading ? `${t.muted}25` : `linear-gradient(135deg, ${t.green}, ${t.accent})`,
+                    color: '#fff',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: fontSans,
+                    cursor: locationLoading ? 'wait' : 'pointer',
+                    marginBottom: 10,
+                  }}
+                >
+                  {locationLoading ? '⏳ جاري تحديد الموقع...' : '📍 استخدام موقعي الحالي'}
+                </button>
+                {locationError && (
+                  <p style={{ fontSize: 10, color: t.red, margin: '0 0 8px', textAlign: 'center' }}>
+                    {locationError}
+                  </p>
+                )}
+                <span style={{ fontSize: 10, color: t.muted, display: 'block', marginBottom: 6 }}>
+                  أو اختر المدينة يدوياً:
+                </span>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                   <input
                     type="text"
@@ -866,7 +1005,7 @@ export function Salah({ state, dispatch }: SalahProps) {
 
             <p style={{ fontSize: 11, color: t.muted, margin: '0 0 10px', lineHeight: 1.6 }}>
               {state.azanEnabled
-                ? 'اختر صوت الأذان المفضّل لك — اضغط ▶️ للمعاينة'
+                ? 'اختر صوت الأذان — ▶️ معاينة | 📥 حمّل للاستخدام دون اتصال'
                 : 'فعّل التنبيه لسماع الأذان عند دخول وقت الصلاة'}
             </p>
 

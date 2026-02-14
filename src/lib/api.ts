@@ -3,6 +3,10 @@
  * large static data. All APIs are free, no keys required. Fallback to local data
  * when offline or on fetch error.
  *
+ * CACHING: Static data (Quran, hadith, athkar) is cached on device so we don't
+ * call APIs repeatedly. Prayer times are cached per day + location. All cache
+ * survives app restarts (localStorage).
+ *
  * AZKAR:
  * - Athkar API (Hisnul Muslim): https://athkar-api.cyclic.app — /morning, /night
  * - muslimKit JSON: https://ahegazy.github.io/muslimKit/json/ (azkar_morning, azkar_evening, etc.)
@@ -20,6 +24,50 @@ const HADITH_BASE =
   'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1';
 const ATHKAR_BASE = 'https://athkar-api.cyclic.app';
 
+const API_CACHE_PREFIX = 'yomy-api-cache:';
+
+/** Get cached JSON; returns null if missing or expired. expiresAt: optional timestamp (ms). */
+function getApiCache<T>(key: string, expiresAt?: number): T | null {
+  try {
+    const raw = localStorage.getItem(API_CACHE_PREFIX + key);
+    if (!raw) return null;
+    if (expiresAt != null && Date.now() > expiresAt) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Store in cache. expiresAt: optional; omit for static data (no expiry). When set, stored as { _exp, data }. */
+function setApiCache(key: string, data: unknown, expiresAt?: number): void {
+  try {
+    const payload = expiresAt != null ? { _exp: expiresAt, data } : data;
+    localStorage.setItem(API_CACHE_PREFIX + key, JSON.stringify(payload));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+/** Get cache entry that was stored with expiresAt (reads _exp from stored object). */
+function getApiCacheWithExpiry<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(API_CACHE_PREFIX + key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { _exp?: number; data?: T };
+    if (parsed._exp != null && Date.now() > parsed._exp) return null;
+    return (parsed.data ?? parsed) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** End of current day (midnight) in ms, for prayer cache TTL. */
+function endOfTodayMs(): number {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d.getTime();
+}
+
 export type HadithItem = { text: string; source: string };
 
 /** Render hadith HTML safely: <br> → line break, strip other tags. Use with whiteSpace: 'pre-line'. */
@@ -30,11 +78,14 @@ export function formatHadithText(html: string): string {
     .replace(/<[^>]+>/g, '');
 }
 
-/** Fetch a single Arabic hadith by book and number. Returns null on error. */
+/** Fetch a single Arabic hadith by book and number. Cached on device (static data). Returns null on error. */
 export async function fetchHadith(
   edition: string = 'ara-bukhari',
   hadithNo: number = 1
 ): Promise<HadithItem | null> {
+  const cacheKey = `hadith:${edition}:${hadithNo}`;
+  const cached = getApiCache<HadithItem>(cacheKey);
+  if (cached?.text) return cached;
   try {
     const url = `${HADITH_BASE}/editions/${edition}/${hadithNo}.min.json`;
     const res = await fetch(url);
@@ -43,9 +94,11 @@ export async function fetchHadith(
     const h = data?.hadiths?.[0];
     const text = h?.text ?? '';
     const bookName = data?.metadata?.name ?? edition;
-    return { text, source: bookName };
+    const item: HadithItem = { text, source: bookName };
+    setApiCache(cacheKey, item);
+    return item;
   } catch {
-    return null;
+    return getApiCache<HadithItem>(cacheKey);
   }
 }
 
@@ -56,27 +109,39 @@ export function hadithNoFromDayIndex(dayIndex: number, maxHadith: number = 1500)
 
 export type AthkarItem = { id: string; text: string; counter: number };
 
-/** Fetch morning athkar. API returns array of { id, text, counter }. Returns [] on error. */
+/** Fetch morning athkar. Cached on device (static data). Returns [] on error. */
 export async function fetchMorningAthkar(): Promise<AthkarItem[]> {
+  const cacheKey = 'athkar:morning';
+  const cached = getApiCache<AthkarItem[]>(cacheKey);
+  if (Array.isArray(cached) && cached.length > 0) return cached;
   try {
     const res = await fetch(`${ATHKAR_BASE}/morning`);
     if (!res.ok) return [];
     const data = await res.json();
-    return Array.isArray(data) ? data : data?.content ?? (data?.id ? [data] : []);
+    const list = Array.isArray(data) ? data : data?.content ?? (data?.id ? [data] : []);
+    if (list.length > 0) setApiCache(cacheKey, list);
+    return list;
   } catch {
-    return [];
+    const fallback = getApiCache<AthkarItem[]>(cacheKey);
+    return Array.isArray(fallback) ? fallback : [];
   }
 }
 
-/** Fetch evening/night athkar. Returns [] on error. */
+/** Fetch evening/night athkar. Cached on device (static data). Returns [] on error. */
 export async function fetchEveningAthkar(): Promise<AthkarItem[]> {
+  const cacheKey = 'athkar:night';
+  const cached = getApiCache<AthkarItem[]>(cacheKey);
+  if (Array.isArray(cached) && cached.length > 0) return cached;
   try {
     const res = await fetch(`${ATHKAR_BASE}/night`);
     if (!res.ok) return [];
     const data = await res.json();
-    return Array.isArray(data) ? data : data?.content ?? (data?.id ? [data] : []);
+    const list = Array.isArray(data) ? data : data?.content ?? (data?.id ? [data] : []);
+    if (list.length > 0) setApiCache(cacheKey, list);
+    return list;
   } catch {
-    return [];
+    const fallback = getApiCache<AthkarItem[]>(cacheKey);
+    return Array.isArray(fallback) ? fallback : [];
   }
 }
 
@@ -117,18 +182,26 @@ export type PrayerTimings = {
 
 const ALADHAN_BASE = 'https://api.aladhan.com/v1';
 
-/** Fetch today's prayer times by city. method: calculation method ID (default 5 = Egyptian). */
+/** Build local date string DD-MM-YYYY (user's timezone). */
+function getLocalDateStr(): string {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const yyyy = today.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+
+/** Fetch today's prayer times by city. Cached per day+location until end of day. method: calculation method ID (default 5 = Egyptian). */
 export async function fetchPrayerTimes(
   city: string = 'Cairo',
   country: string = 'Egypt',
   method: number = 5
 ): Promise<PrayerTimings | null> {
+  const dateStr = getLocalDateStr();
+  const cacheKey = `prayer:${dateStr}:city:${city}:${country}:${method}`;
+  const cached = getApiCacheWithExpiry<PrayerTimings>(cacheKey);
+  if (cached) return cached;
   try {
-    const today = new Date();
-    const dd = String(today.getDate()).padStart(2, '0');
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const yyyy = today.getFullYear();
-    const dateStr = `${dd}-${mm}-${yyyy}`;
     const url = `${ALADHAN_BASE}/timingsByCity/${dateStr}?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${method}`;
     const res = await fetch(url);
     if (!res.ok) return null;
@@ -137,7 +210,7 @@ export async function fetchPrayerTimes(
     if (!timings) return null;
     // Strip timezone info like " (EET)" — keep only HH:mm
     const clean = (t: string) => (t ?? '').replace(/\s*\(.*\)/, '').trim();
-    return {
+    const result: PrayerTimings = {
       Fajr: clean(timings.Fajr),
       Sunrise: clean(timings.Sunrise),
       Dhuhr: clean(timings.Dhuhr),
@@ -145,26 +218,72 @@ export async function fetchPrayerTimes(
       Maghrib: clean(timings.Maghrib),
       Isha: clean(timings.Isha),
     };
+    setApiCache(cacheKey, result, endOfTodayMs());
+    return result;
   } catch {
-    return null;
+    return getApiCacheWithExpiry<PrayerTimings>(cacheKey);
   }
 }
 
-/** React hook: prayer times for today */
+/** Fetch today's prayer times by user coordinates. Cached per day+coords until end of day. */
+export async function fetchPrayerTimesByCoords(
+  latitude: number,
+  longitude: number,
+  method: number = 5
+): Promise<PrayerTimings | null> {
+  const dateStr = getLocalDateStr();
+  const cacheKey = `prayer:${dateStr}:coords:${latitude.toFixed(4)}:${longitude.toFixed(4)}:${method}`;
+  const cached = getApiCacheWithExpiry<PrayerTimings>(cacheKey);
+  if (cached) return cached;
+  try {
+    const url = `${ALADHAN_BASE}/timings/${dateStr}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const timings = data?.data?.timings;
+    if (!timings) return null;
+    const clean = (t: string) => (t ?? '').replace(/\s*\(.*\)/, '').trim();
+    const result: PrayerTimings = {
+      Fajr: clean(timings.Fajr),
+      Sunrise: clean(timings.Sunrise),
+      Dhuhr: clean(timings.Dhuhr),
+      Asr: clean(timings.Asr),
+      Maghrib: clean(timings.Maghrib),
+      Isha: clean(timings.Isha),
+    };
+    setApiCache(cacheKey, result, endOfTodayMs());
+    return result;
+  } catch {
+    return getApiCacheWithExpiry<PrayerTimings>(cacheKey);
+  }
+}
+
+/** React hook: prayer times for today. Uses coordinates when both provided, else city/country. */
 export function usePrayerTimes(
   city: string,
   country: string,
-  method: number
+  method: number,
+  latitude?: number | null,
+  longitude?: number | null
 ): { times: PrayerTimings | null; loading: boolean; error: boolean } {
   const [times, setTimes] = useState<PrayerTimings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  const useCoords =
+    typeof latitude === 'number' &&
+    Number.isFinite(latitude) &&
+    typeof longitude === 'number' &&
+    Number.isFinite(longitude);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(false);
-    fetchPrayerTimes(city, country, method).then((t) => {
+    const fetchFn = useCoords
+      ? fetchPrayerTimesByCoords(latitude!, longitude!, method)
+      : fetchPrayerTimes(city, country, method);
+    fetchFn.then((t) => {
       if (cancelled) return;
       if (t) {
         setTimes(t);
@@ -174,8 +293,10 @@ export function usePrayerTimes(
       }
       setLoading(false);
     });
-    return () => { cancelled = true; };
-  }, [city, country, method]);
+    return () => {
+      cancelled = true;
+    };
+  }, [useCoords, city, country, method, latitude, longitude]);
 
   return { times, loading, error };
 }
@@ -235,53 +356,138 @@ export function getNextPrayer(
   return null;
 }
 
-/* ─── Azan Audio Player ─── */
+/* ─── Azan Audio Player (offline cache) ─── */
+
+const AZAN_CACHE_NAME = 'yomy-azan-v1';
 
 let currentAudio: HTMLAudioElement | null = null;
+let currentBlobUrl: string | null = null;
+
+function openAzanCache(): Promise<Cache | null> {
+  if (typeof caches === 'undefined') return Promise.resolve(null);
+  return caches.open(AZAN_CACHE_NAME).catch(() => null);
+}
+
+/** Get cached azan as a blob URL for playback, or null if not cached. */
+export async function getCachedAzanBlobUrl(url: string): Promise<string | null> {
+  const cache = await openAzanCache();
+  if (!cache) return null;
+  try {
+    const res = await cache.match(url);
+    if (!res || !res.ok) return null;
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
+}
+
+/** Download azan audio and store in cache for offline use. Uses proxy in dev to avoid CORS. */
+export async function downloadAzanForOffline(url: string): Promise<boolean> {
+  const cache = await openAzanCache();
+  if (!cache) return false;
+  try {
+    const fetchUrl = getAzanFetchUrl(url);
+    const res = await fetch(fetchUrl);
+    if (!res.ok) return false;
+    await cache.put(url, res);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Check if azan for this URL is already cached (available offline). */
+export async function isAzanCached(url: string): Promise<boolean> {
+  const cache = await openAzanCache();
+  if (!cache) return false;
+  const res = await cache.match(url);
+  return res != null && res.ok;
+}
 
 /**
- * Play an azan sound from URL. Stops any currently playing azan.
+ * In dev, CDN has no CORS; use Vite proxy URL so fetch works. In prod/capacitor use original URL.
+ * Strip /audio so we request /aladhan-audio/adhans/... which proxy rewrites to /audio/adhans/...
+ */
+function getAzanFetchUrl(url: string): string {
+  if (import.meta.env.DEV && url.startsWith('https://cdn.aladhan.com/audio/')) {
+    return `${window.location.origin}/aladhan-audio${url.slice('https://cdn.aladhan.com/audio'.length)}`;
+  }
+  return url;
+}
+
+/**
+ * Resolve playable URL: use cached blob if available; otherwise use remote URL directly.
+ * We do not fetch here (CDN has no CORS). Cache is filled only via downloadAzanForOffline.
+ * Caller must revoke the returned blob URL when done if it's a blob.
+ */
+async function resolveAzanPlayUrl(url: string): Promise<{ url: string; isBlob: boolean }> {
+  const blobUrl = await getCachedAzanBlobUrl(url);
+  if (blobUrl) return { url: blobUrl, isBlob: true };
+  return { url, isBlob: false };
+}
+
+/**
+ * Play an azan sound from URL. Uses cached copy when available (offline); otherwise
+ * fetches once and caches for next time. Stops any currently playing azan.
  * Returns a promise that resolves with the audio element if playback started,
- * or null if playback failed (blocked, load error, or network error).
+ * or null if playback failed.
  */
 export function playAzan(url: string): Promise<HTMLAudioElement | null> {
   return new Promise((resolve) => {
-    try {
-      stopAzan();
-      const audio = new Audio(url);
-      audio.volume = 1.0;
-      currentAudio = audio;
-
-      const cleanup = () => {
-        audio.removeEventListener('error', onError);
-        if (currentAudio === audio) currentAudio = null;
-      };
-
-      const onError = () => {
-        cleanup();
+    (async () => {
+      try {
         stopAzan();
+        const { url: playUrl, isBlob } = await resolveAzanPlayUrl(url);
+        if (isBlob) currentBlobUrl = playUrl;
+
+        const audio = new Audio(playUrl);
+        audio.volume = 1.0;
+        currentAudio = audio;
+
+        const cleanup = () => {
+          audio.removeEventListener('error', onError);
+          if (currentAudio === audio) currentAudio = null;
+          if (currentBlobUrl === playUrl && isBlob) {
+            URL.revokeObjectURL(playUrl);
+            currentBlobUrl = null;
+          }
+        };
+
+        const onError = () => {
+          cleanup();
+          stopAzan();
+          resolve(null);
+        };
+
+        audio.addEventListener('error', onError);
+        audio.addEventListener('ended', () => {
+          if (currentAudio === audio) currentAudio = null;
+          if (currentBlobUrl === playUrl && isBlob) {
+            URL.revokeObjectURL(playUrl);
+            currentBlobUrl = null;
+          }
+        });
+
+        audio.play().then(() => {
+          audio.removeEventListener('error', onError);
+          resolve(audio);
+        }).catch(() => {
+          onError();
+        });
+      } catch {
         resolve(null);
-      };
-
-      audio.addEventListener('error', onError);
-      audio.addEventListener('ended', () => {
-        if (currentAudio === audio) currentAudio = null;
-      });
-
-      audio.play().then(() => {
-        audio.removeEventListener('error', onError);
-        resolve(audio);
-      }).catch(() => {
-        onError();
-      });
-    } catch {
-      resolve(null);
-    }
+      }
+    })();
   });
 }
 
 /** Stop currently playing azan */
 export function stopAzan(): void {
+  if (currentBlobUrl) {
+    URL.revokeObjectURL(currentBlobUrl);
+    currentBlobUrl = null;
+  }
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
@@ -298,11 +504,26 @@ export function isAzanPlaying(): boolean {
 
 const QURAN_API = 'https://api.alquran.cloud/v1';
 const QURAN_CACHE_PREFIX = 'yomy-quran-';
+const QURAN_PAGE_CACHE_PREFIX = 'yomy-quran-page-';
+export const QURAN_TOTAL_PAGES = 604;
 
 export type QuranAyah = {
   number: number;
   text: string;
   numberInSurah: number;
+};
+
+/** Single ayah as returned in a page (includes surah info) */
+export type QuranPageAyah = {
+  text: string;
+  numberInSurah: number;
+  surah: { number: number; name: string };
+};
+
+/** One page of the Mus'haf (standard 604-page layout) */
+export type QuranPageData = {
+  pageNumber: number;
+  ayahs: QuranPageAyah[];
 };
 
 function getCachedSurah(num: number): QuranAyah[] | null {
@@ -319,9 +540,55 @@ function cacheSurah(num: number, ayahs: QuranAyah[]): void {
   } catch { /* ignore quota */ }
 }
 
+function getCachedPage(pageNum: number): QuranPageData | null {
+  try {
+    const raw = localStorage.getItem(QURAN_PAGE_CACHE_PREFIX + pageNum);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function cachePage(data: QuranPageData): void {
+  try {
+    localStorage.setItem(QURAN_PAGE_CACHE_PREFIX + data.pageNumber, JSON.stringify(data));
+  } catch { /* ignore quota */ }
+}
+
 /** Check if a surah is cached locally */
 export function isSurahCached(num: number): boolean {
   return getCachedSurah(num) !== null;
+}
+
+/** Check if a page is cached locally (for offline) */
+export function isQuranPageCached(pageNum: number): boolean {
+  return getCachedPage(pageNum) !== null;
+}
+
+/** Fetch one page of the Quran (1–604, Mus'haf layout). Cached for offline. */
+export async function fetchQuranPage(pageNum: number): Promise<QuranPageData | null> {
+  if (pageNum < 1 || pageNum > QURAN_TOTAL_PAGES) return null;
+  const cached = getCachedPage(pageNum);
+  if (cached) return cached;
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
+  try {
+    const res = await fetch(`${QURAN_API}/page/${pageNum}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const ayahs = data?.data?.ayahs;
+    if (!Array.isArray(ayahs)) return null;
+    const cleaned: QuranPageData = {
+      pageNumber: pageNum,
+      ayahs: ayahs.map((a: { text: string; numberInSurah: number; surah: { number: number; name: string } }) => ({
+        text: a.text,
+        numberInSurah: a.numberInSurah,
+        surah: { number: a.surah.number, name: a.surah.name },
+      })),
+    };
+    cachePage(cleaned);
+    return cleaned;
+  } catch {
+    return getCachedPage(pageNum);
+  }
 }
 
 /** Fetch surah text (Hafs/Uthmani) from API with local cache. Returns null on error/offline. */

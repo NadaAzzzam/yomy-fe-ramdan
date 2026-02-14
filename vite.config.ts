@@ -10,6 +10,13 @@ export default defineConfig({
       clientPort: 5174,
       overlay: true,
     },
+    proxy: {
+      '/aladhan-audio': {
+        target: 'https://cdn.aladhan.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/aladhan-audio/, '/audio'),
+      },
+    },
   },
   build: {
     target: 'es2020',

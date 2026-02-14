@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useHistory } from "react-router-dom";
 import { IonContent, IonPage } from "@ionic/react";
 import { DynMoon } from "../components/DynMoon";
 import { Card } from "../components/Card";
@@ -27,13 +28,13 @@ import type { AppState } from "../lib/state";
 import type { Action } from "../lib/state";
 
 const CHALLENGES = [
-  { key: "azkarMorning", icon: "☀️", label: "أذكار الصباح" },
-  { key: "azkarEvening", icon: "🌅", label: "أذكار المساء" },
-  { key: "qiyam", icon: "🌙", label: "قيام الليل" },
-  { key: "sadaqa", icon: "💰", label: "صدقة" },
-  { key: "podcast", icon: "🎙️", label: "بودكاست" },
-  { key: "dua", icon: "🤲", label: "الدعاء قبل المغرب" },
-  { key: "tafsir", icon: "📚", label: "تفسير" },
+  { key: "azkarMorning", icon: "☀️", label: "أذكار الصباح", link: "/subha" as const },
+  { key: "azkarEvening", icon: "🌅", label: "أذكار المساء", link: "/subha" as const },
+  { key: "qiyam", icon: "🌙", label: "قيام الليل", link: "/more" as const },
+  { key: "sadaqa", icon: "💰", label: "صدقة", link: "/more" as const },
+  { key: "podcast", icon: "🎙️", label: "بودكاست", link: "/more" as const },
+  { key: "dua", icon: "🤲", label: "الدعاء قبل المغرب", link: "/more" as const },
+  { key: "tafsir", icon: "📚", label: "تفسير", link: "/more" as const },
 ];
 
 type HomeProps = { state: AppState; dispatch: (a: Action) => void };
@@ -41,6 +42,7 @@ type HomeProps = { state: AppState; dispatch: (a: Action) => void };
 export function Home({ state, dispatch }: HomeProps) {
   const t = useTheme();
   const isDark = useIsDark();
+  const history = useHistory();
   const info = getRamadanInfo();
 
   // Use same effective slots as the list (merge todaySlots with readingTimes) so progress always matches what user sees
@@ -61,10 +63,12 @@ export function Home({ state, dispatch }: HomeProps) {
           };
         });
 
-  const tp = effectiveSlots.reduce(
+  const slotPages = effectiveSlots.reduce(
     (s, x) => s + (x.done ? x.pages : 0),
     0,
   );
+  const viewedPages = state.todayQuranPagesViewed?.length ?? 0;
+  const tp = Math.max(slotPages, viewedPages);
   const dpct = Math.min(100, Math.round((tp / state.dailyPages) * 100));
   const ac = Object.entries(state.goals)
     .filter(([, v]) => v)
@@ -79,7 +83,7 @@ export function Home({ state, dispatch }: HomeProps) {
     cd * 50 + tp * 3 + Object.values(state.subha).reduce((a, b) => a + b, 0) + state.quranMilestoneXP;
   const juz = getJuzInfo(state.totalPagesEver + tp);
   const dayIdx = Math.max(0, (info.day ?? new Date().getDate()) - 1);
-  const { hadith, loading: hadithLoading } = useHadithOfTheDay(dayIdx, HADITHS);
+  const { hadith } = useHadithOfTheDay(dayIdx, HADITHS);
   const todayIbada = DAILY_IBADAAT[dayIdx % DAILY_IBADAAT.length]!;
   const todayTip = DAILY_TIPS[dayIdx % DAILY_TIPS.length]!;
   const todayDhikr = MORNING_ADHKAR[dayIdx % MORNING_ADHKAR.length]!;
@@ -729,9 +733,31 @@ export function Home({ state, dispatch }: HomeProps) {
             </div>
           </Card>
 
-          {/* ─── Quran Reading ─── (list and progress both use effectiveSlots) */}
+          {/* ─── Quran Reading ─── (dynamic: slots or actual pages viewed in Quran app) */}
           <Card glow>
-            <Sec icon="📖" text={`القراءة — ${tp}/${state.dailyPages}`} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+              <Sec icon="📖" text={`القراءة — ${tp} / ${state.dailyPages} صفحة`} />
+              <button
+                type="button"
+                onClick={() => history.push("/quran")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 12,
+                  border: `1px solid ${t.gold}40`,
+                  background: `${t.gold}15`,
+                  color: t.gold,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  fontFamily: fontSans,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                افتح المصحف ←
+              </button>
+            </div>
             {effectiveSlots.map((slot, i) => (
                 <div
                   key={i}
@@ -987,6 +1013,26 @@ export function Home({ state, dispatch }: HomeProps) {
                     +٥٠ ⚡
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    history.push(c.link);
+                  }}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.border}50`,
+                    background: "transparent",
+                    color: t.accent,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    fontFamily: fontSans,
+                    cursor: "pointer",
+                  }}
+                >
+                  افتح
+                </button>
               </div>
             ))}
           </Card>

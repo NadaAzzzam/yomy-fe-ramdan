@@ -110,6 +110,20 @@ export type AppState = {
   bedtimeRating: number;
   /** Bedtime text answers for today */
   bedtimeTexts: Record<string, string>;
+  
+  /* ─── QURAN-SPECIFIC FEATURES ─── */
+  /** Memorized verses history */
+  memorizedVerses: Array<{ surah: string; ayahStart: number; ayahEnd: number; date: string }>;
+  /** Today's Quran reflection done */
+  quranReflectionDone: boolean;
+  /** Today's Quran memorization done */
+  quranMemorizeDone: boolean;
+  /** Today's Quran listening done */
+  quranListenDone: boolean;
+  /** Selected Quran reciter for listening */
+  selectedReciter: string;
+  /** Total Quran milestone XP earned (separate from regular XP) */
+  quranMilestoneXP: number;
 };
 
 export type Action =
@@ -155,7 +169,14 @@ export type Action =
   | { type: 'SAVE_JOURNAL'; date: string; entry: JournalEntry }
   | { type: 'SET_SUPPORT_DISMISSED'; dismissed: boolean }
   | { type: 'SET_BEDTIME_RATING'; rating: number }
-  | { type: 'SET_BEDTIME_TEXT'; key: string; text: string };
+  | { type: 'SET_BEDTIME_TEXT'; key: string; text: string }
+  /* ─── QURAN-SPECIFIC ACTIONS ─── */
+  | { type: 'ADD_MEMORIZED_VERSE'; verse: { surah: string; ayahStart: number; ayahEnd: number; date: string } }
+  | { type: 'SET_QURAN_REFLECTION_DONE'; done: boolean }
+  | { type: 'SET_QURAN_MEMORIZE_DONE'; done: boolean }
+  | { type: 'SET_QURAN_LISTEN_DONE'; done: boolean }
+  | { type: 'SET_SELECTED_RECITER'; reciter: string }
+  | { type: 'ADD_QURAN_MILESTONE_XP'; xp: number };
 
 const STORAGE_KEY = 'yomy-ramadan-state';
 
@@ -175,6 +196,9 @@ export function defaultState(): AppState {
       dua: true,
       tafsir: false,
       subha: true,
+      quranReflection: false,
+      quranMemorize: false,
+      quranListen: false,
     },
     todaySlots: [],
     todayChecks: {},
@@ -226,6 +250,13 @@ export function defaultState(): AppState {
     supportDismissed: false,
     bedtimeRating: 0,
     bedtimeTexts: {},
+    /* QURAN FEATURES */
+    memorizedVerses: [],
+    quranReflectionDone: false,
+    quranMemorizeDone: false,
+    quranListenDone: false,
+    selectedReciter: 'mishary',
+    quranMilestoneXP: 0,
   };
 }
 
@@ -413,6 +444,17 @@ function loadState(): AppState | null {
         }
         return out;
       })(),
+      /* QURAN FEATURES */
+      memorizedVerses: Array.isArray(parsed.memorizedVerses)
+        ? parsed.memorizedVerses.filter(
+          (v: unknown) => isPlainObject(v) && typeof (v as any).surah === 'string' && typeof (v as any).date === 'string'
+        )
+        : def.memorizedVerses,
+      quranReflectionDone: typeof parsed.quranReflectionDone === 'boolean' ? parsed.quranReflectionDone : def.quranReflectionDone,
+      quranMemorizeDone: typeof parsed.quranMemorizeDone === 'boolean' ? parsed.quranMemorizeDone : def.quranMemorizeDone,
+      quranListenDone: typeof parsed.quranListenDone === 'boolean' ? parsed.quranListenDone : def.quranListenDone,
+      selectedReciter: typeof parsed.selectedReciter === 'string' ? parsed.selectedReciter : def.selectedReciter,
+      quranMilestoneXP: typeof parsed.quranMilestoneXP === 'number' ? parsed.quranMilestoneXP : def.quranMilestoneXP,
     };
   } catch {
     return null;
@@ -580,6 +622,10 @@ export function reducer(s: AppState, a: Action): AppState {
         lastTenChecks: {},
         bedtimeRating: 0,
         bedtimeTexts: {},
+        /* Reset Quran daily checks */
+        quranReflectionDone: false,
+        quranMemorizeDone: false,
+        quranListenDone: false,
       };
     }
     case 'SET_LAST_SEEN_DATE':
@@ -654,6 +700,19 @@ export function reducer(s: AppState, a: Action): AppState {
       }
       return { ...s, duas: newDuas };
     }
+    /* ─── QURAN-SPECIFIC ACTIONS ─── */
+    case 'ADD_MEMORIZED_VERSE':
+      return { ...s, memorizedVerses: [a.verse, ...s.memorizedVerses] };
+    case 'SET_QURAN_REFLECTION_DONE':
+      return { ...s, quranReflectionDone: a.done };
+    case 'SET_QURAN_MEMORIZE_DONE':
+      return { ...s, quranMemorizeDone: a.done };
+    case 'SET_QURAN_LISTEN_DONE':
+      return { ...s, quranListenDone: a.done };
+    case 'SET_SELECTED_RECITER':
+      return { ...s, selectedReciter: a.reciter };
+    case 'ADD_QURAN_MILESTONE_XP':
+      return { ...s, quranMilestoneXP: s.quranMilestoneXP + a.xp };
     default:
       return s;
   }

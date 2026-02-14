@@ -18,6 +18,8 @@ import {
   HEART_FEELINGS,
   DAILY_LEARNING,
   NO_PRESSURE_MESSAGES,
+  DAILY_QURAN_REFLECTIONS,
+  QURAN_MILESTONES,
 } from "../lib/data";
 import { useHadithOfTheDay, formatHadithText } from "../lib/api";
 import { fontSans } from "../lib/theme";
@@ -40,7 +42,29 @@ export function Home({ state, dispatch }: HomeProps) {
   const t = useTheme();
   const isDark = useIsDark();
   const info = getRamadanInfo();
-  const tp = state.todaySlots.reduce((s, x) => s + (x.done ? x.pages : 0), 0);
+
+  // Use same effective slots as the list (merge todaySlots with readingTimes) so progress always matches what user sees
+  const effectiveSlots =
+    state.todaySlots.length === state.readingTimes.length
+      ? state.todaySlots
+      : state.readingTimes.map((rt, idx) => {
+          const ex = state.todaySlots[idx];
+          const match =
+            ex && ex.label === rt.label && ex.icon === rt.icon ? ex : null;
+          const ps = Math.ceil(
+            state.dailyPages / Math.max(1, state.readingTimes.length),
+          );
+          return {
+            ...rt,
+            done: match?.done ?? false,
+            pages: match?.pages ?? ps,
+          };
+        });
+
+  const tp = effectiveSlots.reduce(
+    (s, x) => s + (x.done ? x.pages : 0),
+    0,
+  );
   const dpct = Math.min(100, Math.round((tp / state.dailyPages) * 100));
   const ac = Object.entries(state.goals)
     .filter(([, v]) => v)
@@ -52,18 +76,31 @@ export function Home({ state, dispatch }: HomeProps) {
   ).length;
   const cpct = ac.length > 0 ? Math.round((cd / ac.length) * 100) : 0;
   const xp =
-    cd * 50 + tp * 3 + Object.values(state.subha).reduce((a, b) => a + b, 0);
+    cd * 50 + tp * 3 + Object.values(state.subha).reduce((a, b) => a + b, 0) + state.quranMilestoneXP;
   const juz = getJuzInfo(state.totalPagesEver + tp);
   const dayIdx = Math.max(0, (info.day ?? new Date().getDate()) - 1);
   const { hadith, loading: hadithLoading } = useHadithOfTheDay(dayIdx, HADITHS);
   const todayIbada = DAILY_IBADAAT[dayIdx % DAILY_IBADAAT.length]!;
   const todayTip = DAILY_TIPS[dayIdx % DAILY_TIPS.length]!;
   const todayDhikr = MORNING_ADHKAR[dayIdx % MORNING_ADHKAR.length]!;
+  
+  const dayHadith = RAMADAN_DAY_HADITHS[dayIdx % RAMADAN_DAY_HADITHS.length]!;
+  const todayLearning = DAILY_LEARNING[dayIdx % DAILY_LEARNING.length]!;
+  const selectedHeart = HEART_FEELINGS.find((h) => h.id === state.heartFeeling);
+  const noPressureMsg = NO_PRESSURE_MESSAGES[dayIdx % NO_PRESSURE_MESSAGES.length]!;
+  const todayReflection = DAILY_QURAN_REFLECTIONS[dayIdx % DAILY_QURAN_REFLECTIONS.length]!;
+  
+  // Check for Quran milestones
+  const lastMilestone = QURAN_MILESTONES.filter(m => m.pages <= (state.totalPagesEver + tp))
+    .sort((a, b) => b.pages - a.pages)[0];
+  const nextMilestone = QURAN_MILESTONES.find(m => m.pages > (state.totalPagesEver + tp));
+
   const [conf, setConf] = useState(false);
   const perf = dpct >= 100 && cpct >= 100;
   useEffect(() => {
     if (perf && !conf) setConf(true);
   }, [perf, conf]);
+  
   const hdr =
     info.phase === "pre"
       ? `باقي ${info.daysTo} يوم على رمضان`
@@ -72,10 +109,6 @@ export function Home({ state, dispatch }: HomeProps) {
         : "رمضان كريم — استمر!";
 
   const ibadaColor = t[todayIbada.color];
-  const dayHadith = RAMADAN_DAY_HADITHS[dayIdx % RAMADAN_DAY_HADITHS.length]!;
-  const todayLearning = DAILY_LEARNING[dayIdx % DAILY_LEARNING.length]!;
-  const selectedHeart = HEART_FEELINGS.find((h) => h.id === state.heartFeeling);
-  const noPressureMsg = NO_PRESSURE_MESSAGES[dayIdx % NO_PRESSURE_MESSAGES.length]!;
 
   return (
     <IonPage>
@@ -358,6 +391,18 @@ export function Home({ state, dispatch }: HomeProps) {
                 التالي: {state.level * 800}
               </span>
             </div>
+            {state.quranMilestoneXP > 0 && (
+              <p
+                style={{
+                  fontSize: 9,
+                  color: t.gold,
+                  margin: "0 0 4px",
+                  textAlign: "center",
+                }}
+              >
+                🏆 مكافأة إنجازات القرآن: +{state.quranMilestoneXP} XP
+              </p>
+            )}
             <div
               style={{
                 width: "100%",
@@ -587,23 +632,107 @@ export function Home({ state, dispatch }: HomeProps) {
             </div>
           </Card>
 
-          {/* ─── Quran Reading ─── (list synced with Reading Times from Setup) */}
+          {/* ─── Daily Quran Reflection ─── */}
+          <Card
+            style={{
+              marginBottom: 12,
+              background: isDark
+                ? `linear-gradient(135deg, ${t.accent}08, ${t.purple}06)`
+                : `linear-gradient(135deg, ${t.accent}0C, ${t.purple}08)`,
+              border: `1px solid ${t.accent}20`,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  background: `${t.accent}15`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  flexShrink: 0,
+                }}
+              >
+                ✨
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 10, color: t.accent, fontWeight: 700 }}>
+                  آية اليوم للتدبّر
+                </span>
+                <p
+                  style={{
+                    fontSize: 10,
+                    color: t.muted,
+                    margin: "2px 0 0",
+                  }}
+                >
+                  {todayReflection.surah} : {todayReflection.ayah}
+                </p>
+              </div>
+            </div>
+            <p
+              style={{
+                fontFamily: "Amiri",
+                fontSize: 14,
+                color: t.text,
+                lineHeight: 2,
+                margin: "0 0 8px",
+                textAlign: "center",
+                padding: "8px",
+                background: isDark ? `${t.accent}05` : `${t.accent}08`,
+                borderRadius: 10,
+              }}
+            >
+              "{todayReflection.arabic}"
+            </p>
+            <p
+              style={{
+                fontSize: 12,
+                color: t.textSec,
+                lineHeight: 1.8,
+                margin: "0 0 8px",
+              }}
+            >
+              {todayReflection.reflection}
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 4,
+                flexWrap: "wrap",
+              }}
+            >
+              {todayReflection.tags.map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    fontSize: 9,
+                    color: t.accent,
+                    background: `${t.accent}10`,
+                    padding: "2px 8px",
+                    borderRadius: 8,
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </Card>
+
+          {/* ─── Quran Reading ─── (list and progress both use effectiveSlots) */}
           <Card glow>
             <Sec icon="📖" text={`القراءة — ${tp}/${state.dailyPages}`} />
-            {state.readingTimes.map((rt, i) => {
-              const sl = state.todaySlots[i];
-              const slot =
-                sl && sl.label === rt.label && sl.icon === rt.icon
-                  ? sl
-                  : {
-                      ...rt,
-                      done: false as boolean,
-                      pages: Math.ceil(
-                        state.dailyPages /
-                          Math.max(1, state.readingTimes.length),
-                      ),
-                    };
-              return (
+            {effectiveSlots.map((slot, i) => (
                 <div
                   key={i}
                   onClick={() => dispatch({ type: "TOGGLE_SLOT", i })}
@@ -655,8 +784,7 @@ export function Home({ state, dispatch }: HomeProps) {
                     {slot.done ? `${slot.pages} ص ✅` : `${slot.pages} ص`}
                   </span>
                 </div>
-              );
-            })}
+            ))}
             <div
               style={{
                 background: t.cardAlt,
@@ -743,6 +871,64 @@ export function Home({ state, dispatch }: HomeProps) {
                 </button>
               </div>
             </div>
+
+            {/* Quran Milestone Achievement */}
+            {lastMilestone && (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  background: `linear-gradient(135deg, ${t.gold}12, ${t.accent}08)`,
+                  border: `1px solid ${t.gold}25`,
+                  animation: "fadeIn .5s",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>{lastMilestone.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <p
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: t.gold,
+                        margin: "0 0 2px",
+                      }}
+                    >
+                      {lastMilestone.title}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: 10,
+                        color: t.textSec,
+                        margin: 0,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {lastMilestone.message}
+                    </p>
+                  </div>
+                </div>
+                {nextMilestone && (
+                  <p
+                    style={{
+                      fontSize: 9,
+                      color: t.muted,
+                      margin: "6px 0 0",
+                      textAlign: "center",
+                    }}
+                  >
+                    الهدف التالي: {nextMilestone.title} ({nextMilestone.pages} صفحة)
+                  </p>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* ─── Daily Challenges ─── */}

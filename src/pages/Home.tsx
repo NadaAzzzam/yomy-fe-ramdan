@@ -14,6 +14,10 @@ import {
   DAILY_IBADAAT,
   DAILY_TIPS,
   MORNING_ADHKAR,
+  RAMADAN_DAY_HADITHS,
+  HEART_FEELINGS,
+  DAILY_LEARNING,
+  NO_PRESSURE_MESSAGES,
 } from "../lib/data";
 import { useHadithOfTheDay, formatHadithText } from "../lib/api";
 import { fontSans } from "../lib/theme";
@@ -68,6 +72,10 @@ export function Home({ state, dispatch }: HomeProps) {
         : "رمضان كريم — استمر!";
 
   const ibadaColor = t[todayIbada.color];
+  const dayHadith = RAMADAN_DAY_HADITHS[dayIdx % RAMADAN_DAY_HADITHS.length]!;
+  const todayLearning = DAILY_LEARNING[dayIdx % DAILY_LEARNING.length]!;
+  const selectedHeart = HEART_FEELINGS.find((h) => h.id === state.heartFeeling);
+  const noPressureMsg = NO_PRESSURE_MESSAGES[dayIdx % NO_PRESSURE_MESSAGES.length]!;
 
   return (
     <IonPage>
@@ -136,6 +144,203 @@ export function Home({ state, dispatch }: HomeProps) {
               </span>
             </div>
           </div>
+
+          {/* ─── Day-Specific Hadith under Moon ─── */}
+          {info.phase === "ramadan" && (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "8px 16px",
+                margin: "0 0 8px",
+                borderRadius: 16,
+                background: isDark ? `${t.gold}08` : `${t.gold}0A`,
+                border: `1px solid ${t.gold}15`,
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: "Amiri",
+                  fontSize: 12,
+                  color: t.text,
+                  lineHeight: 1.9,
+                  margin: "2px 0",
+                  opacity: 0.9,
+                }}
+              >
+                "{dayHadith.text}"
+              </p>
+              <p style={{ fontSize: 9, color: t.muted, margin: 0 }}>
+                — {dayHadith.source}
+              </p>
+            </div>
+          )}
+
+          {/* ─── Heart Check-in ─── */}
+          <Card
+            style={{
+              margin: "0 0 10px",
+              padding: "14px 16px",
+              background: isDark
+                ? `linear-gradient(135deg, ${t.purple}08, ${t.accent}06)`
+                : `linear-gradient(135deg, ${t.purple}0A, ${t.accent}08)`,
+              border: `1px solid ${t.purple}18`,
+            }}
+          >
+            <Sec icon="💜" text="قلبك النهارده عامل إيه؟" />
+            {!selectedHeart ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  justifyContent: "center",
+                }}
+              >
+                {HEART_FEELINGS.map((h) => (
+                  <button
+                    key={h.id}
+                    onClick={() =>
+                      dispatch({ type: "SET_HEART_FEELING", feeling: h.id })
+                    }
+                    style={{
+                      background: t.cardAlt,
+                      border: `1px solid ${t.border}40`,
+                      borderRadius: 14,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontFamily: fontSans,
+                      color: t.text,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      transition: "all .2s",
+                      minWidth: "calc(50% - 6px)",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <span style={{ fontSize: 16 }}>{h.emoji}</span>
+                    <span style={{ fontSize: 11 }}>{h.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div
+                style={{
+                  background: t.cardAlt,
+                  borderRadius: 16,
+                  padding: "14px",
+                  animation: "fadeIn .4s",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 10,
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>{selectedHeart.emoji}</span>
+                  <span
+                    style={{ fontSize: 13, fontWeight: 700, color: t.text }}
+                  >
+                    {selectedHeart.label}
+                  </span>
+                  <button
+                    onClick={() =>
+                      dispatch({ type: "SET_HEART_FEELING", feeling: "" })
+                    }
+                    style={{
+                      marginRight: "auto",
+                      fontSize: 10,
+                      color: t.muted,
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: fontSans,
+                      textDecoration: "underline",
+                    }}
+                  >
+                    غيّر
+                  </button>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "10px 12px",
+                    borderRadius: 12,
+                    background: state.heartActionDone
+                      ? `${t.green}10`
+                      : `${t.purple}10`,
+                    border: `1px solid ${state.heartActionDone ? t.green : t.purple}20`,
+                    cursor: "pointer",
+                    transition: "all .25s",
+                  }}
+                  onClick={() =>
+                    dispatch({
+                      type: "SET_HEART_ACTION_DONE",
+                      done: !state.heartActionDone,
+                    })
+                  }
+                >
+                  <span style={{ fontSize: 18 }}>
+                    {selectedHeart.actionIcon}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: state.heartActionDone ? t.green : t.text,
+                      fontWeight: 600,
+                      flex: 1,
+                      textDecoration: state.heartActionDone
+                        ? "line-through"
+                        : "none",
+                    }}
+                  >
+                    {selectedHeart.action}
+                  </span>
+                  {state.heartActionDone && (
+                    <span
+                      style={{ fontSize: 10, color: t.green, fontWeight: 700 }}
+                    >
+                      ✓ تم
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* ─── No Pressure Message (when mode is on) ─── */}
+          {state.noPressureMode && (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "10px 14px",
+                marginBottom: 8,
+                borderRadius: 14,
+                background: `${t.green}08`,
+                border: `1px solid ${t.green}15`,
+                animation: "fadeIn .5s",
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{noPressureMsg.icon}</span>
+              <p
+                style={{
+                  fontSize: 12,
+                  color: t.textSec,
+                  margin: "3px 0 0",
+                  lineHeight: 1.7,
+                  fontFamily: "Amiri",
+                }}
+              >
+                {noPressureMsg.text}
+              </p>
+            </div>
+          )}
 
           {/* ─── XP Bar ─── */}
           <Card style={{ padding: "10px 14px", margin: "10px 0" }}>
@@ -670,6 +875,32 @@ export function Home({ state, dispatch }: HomeProps) {
               </p>
             </div>
           </div>
+
+          {/* ─── Daily Learning ─── */}
+          <Card style={{ marginTop: 12 }}>
+            <Sec icon={todayLearning.icon} text={todayLearning.category} />
+            <p
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: t.text,
+                margin: "0 0 4px",
+              }}
+            >
+              {todayLearning.title}
+            </p>
+            <p
+              style={{
+                fontSize: 12,
+                color: t.textSec,
+                margin: 0,
+                lineHeight: 1.7,
+                fontFamily: "Amiri",
+              }}
+            >
+              {todayLearning.content}
+            </p>
+          </Card>
 
           {/* ─── Perfect Day ─── */}
           {perf && (

@@ -22,6 +22,27 @@ export const REMINDER_MESSAGES_AR: string[] = [
   'متبقاش كتير — تعالى كمل',
 ];
 
+/** Challenge-specific reminders */
+export const CHALLENGE_REMINDERS: string[] = [
+  '🤲 متنساش الدعاء قبل المغرب — دعوة الصائم لا تُرد!',
+  '📿 فكّرك تسبّح — سبحان الله وبحمده ١٠٠ مرة',
+  '☀️ فاكر أذكار الصباح؟ حصنك اليوم!',
+  '🌅 وقت أذكار المساء — متفوتهاش',
+  '💰 صدقة اليوم ولو بسيطة — الصدقة تطفئ الخطيئة',
+  '📖 افتح المصحف ولو صفحة — القرآن يشفع لصاحبه',
+  '🕌 صلّي النوافل — بيت في الجنة!',
+  '🌙 قيام الليل — أقرب ما يكون العبد من ربه',
+];
+
+/** Last 10 nights special reminders */
+export const LAST_TEN_NIGHTS_REMINDERS: string[] = [
+  '✨ العشر الأواخر — اجتهد الليلة! قد تكون ليلة القدر',
+  '🤲 اللهم إنك عفو تحب العفو فاعفُ عنا',
+  '🌙 أحيِ هذه الليلة — خير من ألف شهر!',
+  '📖 أكثر من القرآن والدعاء في هذه الليالي المباركة',
+  '💎 لا تضيّع ليالي العشر — كل ليلة ممكن تكون ليلة القدر',
+];
+
 const DUA_CHANNEL_ID = 'yomy-dua';
 const REMINDER_CHANNEL_ID = 'yomy-reminder';
 
@@ -117,16 +138,51 @@ function scheduleNextReminderWeb(): void {
  * Web notifications below work while the app is open.
  */
 
+/** Schedule challenge reminders at strategic times (afternoon/evening). */
+const CHALLENGE_HOURS = [15, 18]; // 3pm, 6pm
+function scheduleNextChallengeReminderWeb(): void {
+  const now = Date.now();
+  let nextAt: Date | null = null;
+  for (const hour of CHALLENGE_HOURS) {
+    const n = getNextAt(hour, 30);
+    if (n.getTime() > now && (nextAt == null || n.getTime() < nextAt.getTime())) nextAt = n;
+  }
+  if (!nextAt) return;
+  const ms = nextAt.getTime() - now;
+  if (ms <= 0) return;
+  const t = setTimeout(() => {
+    const msg = pickRandom(CHALLENGE_REMINDERS);
+    if (msg) showWebNotification('تحدي رمضان 🌙', msg, 'yomy-challenge');
+    scheduleNextChallengeReminderWeb();
+  }, ms);
+  scheduledTimeouts.push(t);
+}
+
+/** Schedule last-10-nights special notification at 10pm. */
+function scheduleLastTenNightsWeb(ramadanDay: number): void {
+  if (ramadanDay < 21 || ramadanDay > 30) return;
+  const nextAt = getNextAt(22, 0);
+  const ms = nextAt.getTime() - Date.now();
+  if (ms <= 0) return;
+  const t = setTimeout(() => {
+    const msg = pickRandom(LAST_TEN_NIGHTS_REMINDERS);
+    if (msg) showWebNotification('العشر الأواخر ✨', msg, 'yomy-last-ten');
+  }, ms);
+  scheduledTimeouts.push(t);
+}
+
 /**
  * Schedule all notifications:
  * - If duaNotificationTime is set and duas exist: one random dua at that time (daily).
- * - If remindersEnabled: Egyptian Arabic reminders at 9:00, 14:00, 20:00.
- * Call after permission is granted and when state.duas / state.duaNotificationTime / state.remindersEnabled change.
+ * - If remindersEnabled: Egyptian Arabic reminders at 9:00, 14:00, 20:00 + challenge reminders.
+ * - If in last 10 nights of Ramadan: special notification at 10pm.
+ * Call after permission is granted and when state changes.
  */
 export async function scheduleNotifications(
   duas: { text: string; day: string }[],
   duaNotificationTime: string | null,
-  remindersEnabled: boolean
+  remindersEnabled: boolean,
+  ramadanDay?: number
 ): Promise<void> {
   clearScheduledTimeouts();
 
@@ -141,6 +197,11 @@ export async function scheduleNotifications(
   }
   if (remindersEnabled) {
     scheduleNextReminderWeb();
+    scheduleNextChallengeReminderWeb();
+    // Last 10 nights special
+    if (ramadanDay != null && ramadanDay >= 21) {
+      scheduleLastTenNightsWeb(ramadanDay);
+    }
   }
 }
 

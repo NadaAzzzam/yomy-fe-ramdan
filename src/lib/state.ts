@@ -21,6 +21,31 @@ export type DailySnapshot = {
   pagesRead: number;
 };
 
+/** Journal entry — one per day */
+export type JournalEntry = {
+  date: string;
+  dayRating: number;         // 1-5
+  closestToAllah: string;    // what brought you closest today
+  improveText: string;       // what to improve tomorrow
+  freeText: string;          // free journal writing
+};
+
+/** Dua with category */
+export type DuaItem = {
+  text: string;
+  day: string;
+  category?: string;
+  answered?: boolean;
+  answeredDate?: string;
+};
+
+/** Charity log entry */
+export type CharityLog = {
+  date: string;
+  type: string;
+  note?: string;
+};
+
 export type AppState = {
   dailyPages: number;
   readingTimes: ReadingTime[];
@@ -32,7 +57,7 @@ export type AppState = {
   bestStreak: number;
   level: number;
   podcasts: { title: string; note?: string; day: string }[];
-  duas: { text: string; day: string }[];
+  duas: DuaItem[];
   subha: SubhaCounts;
   setupDone: boolean;
   /** Daily time for random dua notification, e.g. "20:00" or null if disabled */
@@ -55,6 +80,36 @@ export type AppState = {
   prayerCountry: string;
   /** Prayer time calculation method ID (Aladhan API) */
   prayerMethod: number;
+
+  /* ─── NEW FIELDS ─── */
+  /** Today's heart feeling id */
+  heartFeeling: string;
+  /** Whether the suggested heart action was done */
+  heartActionDone: boolean;
+  /** Family worship checks for today */
+  familyChecks: Record<string, boolean>;
+  /** Charity log history */
+  charityLog: CharityLog[];
+  /** Today's charity done */
+  todayCharityDone: boolean;
+  /** Self-care checks for today */
+  selfCareChecks: Record<string, boolean>;
+  /** Today's energy level */
+  energyLevel: string;
+  /** Relationship challenge done today */
+  relationshipDone: boolean;
+  /** Last 10 nights goals checks */
+  lastTenChecks: Record<string, boolean>;
+  /** No-pressure mode */
+  noPressureMode: boolean;
+  /** Journal entries — key = YYYY-MM-DD */
+  journal: Record<string, JournalEntry>;
+  /** Whether support message was dismissed */
+  supportDismissed: boolean;
+  /** Today's bedtime rating (1-5) */
+  bedtimeRating: number;
+  /** Bedtime text answers for today */
+  bedtimeTexts: Record<string, string>;
 };
 
 export type Action =
@@ -67,8 +122,9 @@ export type Action =
   | { type: 'TOGGLE_CHECK'; key: string }
   | { type: 'ADD_PODCAST'; p: { title: string; note?: string; day: string } }
   | { type: 'RM_PODCAST'; i: number }
-  | { type: 'ADD_DUA'; d: { text: string; day: string } }
+  | { type: 'ADD_DUA'; d: DuaItem }
   | { type: 'RM_DUA'; i: number }
+  | { type: 'TOGGLE_DUA_ANSWERED'; i: number }
   | { type: 'SUBHA_INC'; id: keyof SubhaCounts }
   | { type: 'SUBHA_RESET'; id: keyof SubhaCounts }
   | { type: 'SUBHA_RESET_ALL' }
@@ -84,7 +140,22 @@ export type Action =
   | { type: 'SET_AZAN_ENABLED'; enabled: boolean }
   | { type: 'SET_PRAYER_LOCATION'; city: string; country: string }
   | { type: 'SET_PRAYER_METHOD'; method: number }
-  | { type: 'RESET_APP' };
+  | { type: 'RESET_APP' }
+  /* ─── NEW ACTIONS ─── */
+  | { type: 'SET_HEART_FEELING'; feeling: string }
+  | { type: 'SET_HEART_ACTION_DONE'; done: boolean }
+  | { type: 'TOGGLE_FAMILY_CHECK'; key: string }
+  | { type: 'ADD_CHARITY'; entry: CharityLog }
+  | { type: 'SET_TODAY_CHARITY_DONE'; done: boolean }
+  | { type: 'TOGGLE_SELF_CARE'; key: string }
+  | { type: 'SET_ENERGY_LEVEL'; level: string }
+  | { type: 'SET_RELATIONSHIP_DONE'; done: boolean }
+  | { type: 'TOGGLE_LAST_TEN_CHECK'; key: string }
+  | { type: 'SET_NO_PRESSURE_MODE'; enabled: boolean }
+  | { type: 'SAVE_JOURNAL'; date: string; entry: JournalEntry }
+  | { type: 'SET_SUPPORT_DISMISSED'; dismissed: boolean }
+  | { type: 'SET_BEDTIME_RATING'; rating: number }
+  | { type: 'SET_BEDTIME_TEXT'; key: string; text: string };
 
 const STORAGE_KEY = 'yomy-ramadan-state';
 
@@ -140,6 +211,21 @@ export function defaultState(): AppState {
     prayerCity: 'Cairo',
     prayerCountry: 'Egypt',
     prayerMethod: 5,
+    /* NEW DEFAULTS */
+    heartFeeling: '',
+    heartActionDone: false,
+    familyChecks: {},
+    charityLog: [],
+    todayCharityDone: false,
+    selfCareChecks: {},
+    energyLevel: '',
+    relationshipDone: false,
+    lastTenChecks: {},
+    noPressureMode: false,
+    journal: {},
+    supportDismissed: false,
+    bedtimeRating: 0,
+    bedtimeTexts: {},
   };
 }
 
@@ -270,6 +356,63 @@ function loadState(): AppState | null {
       prayerCity: typeof parsed.prayerCity === 'string' ? parsed.prayerCity : def.prayerCity,
       prayerCountry: typeof parsed.prayerCountry === 'string' ? parsed.prayerCountry : def.prayerCountry,
       prayerMethod: typeof parsed.prayerMethod === 'number' ? parsed.prayerMethod : def.prayerMethod,
+      /* NEW FIELDS */
+      heartFeeling: typeof parsed.heartFeeling === 'string' ? parsed.heartFeeling : def.heartFeeling,
+      heartActionDone: typeof parsed.heartActionDone === 'boolean' ? parsed.heartActionDone : def.heartActionDone,
+      familyChecks: (() => {
+        if (!isPlainObject(parsed.familyChecks)) return def.familyChecks;
+        const out: Record<string, boolean> = {};
+        for (const k of Object.keys(parsed.familyChecks)) {
+          if (typeof parsed.familyChecks[k] === 'boolean') out[k] = parsed.familyChecks[k];
+        }
+        return out;
+      })(),
+      charityLog: Array.isArray(parsed.charityLog)
+        ? parsed.charityLog.filter(
+          (c: unknown) => isPlainObject(c) && typeof (c as CharityLog).date === 'string' && typeof (c as CharityLog).type === 'string'
+        ).map((c: CharityLog) => ({ date: c.date, type: c.type, note: typeof c.note === 'string' ? c.note : undefined }))
+        : def.charityLog,
+      todayCharityDone: typeof parsed.todayCharityDone === 'boolean' ? parsed.todayCharityDone : def.todayCharityDone,
+      selfCareChecks: (() => {
+        if (!isPlainObject(parsed.selfCareChecks)) return def.selfCareChecks;
+        const out: Record<string, boolean> = {};
+        for (const k of Object.keys(parsed.selfCareChecks)) {
+          if (typeof parsed.selfCareChecks[k] === 'boolean') out[k] = parsed.selfCareChecks[k];
+        }
+        return out;
+      })(),
+      energyLevel: typeof parsed.energyLevel === 'string' ? parsed.energyLevel : def.energyLevel,
+      relationshipDone: typeof parsed.relationshipDone === 'boolean' ? parsed.relationshipDone : def.relationshipDone,
+      lastTenChecks: (() => {
+        if (!isPlainObject(parsed.lastTenChecks)) return def.lastTenChecks;
+        const out: Record<string, boolean> = {};
+        for (const k of Object.keys(parsed.lastTenChecks)) {
+          if (typeof parsed.lastTenChecks[k] === 'boolean') out[k] = parsed.lastTenChecks[k];
+        }
+        return out;
+      })(),
+      noPressureMode: typeof parsed.noPressureMode === 'boolean' ? parsed.noPressureMode : def.noPressureMode,
+      journal: (() => {
+        if (!isPlainObject(parsed.journal)) return def.journal;
+        const out: Record<string, JournalEntry> = {};
+        for (const k of Object.keys(parsed.journal)) {
+          const v = (parsed.journal as Record<string, unknown>)[k];
+          if (isPlainObject(v) && typeof (v as JournalEntry).date === 'string') {
+            out[k] = v as JournalEntry;
+          }
+        }
+        return out;
+      })(),
+      supportDismissed: typeof parsed.supportDismissed === 'boolean' ? parsed.supportDismissed : def.supportDismissed,
+      bedtimeRating: typeof parsed.bedtimeRating === 'number' ? parsed.bedtimeRating : def.bedtimeRating,
+      bedtimeTexts: (() => {
+        if (!isPlainObject(parsed.bedtimeTexts)) return def.bedtimeTexts;
+        const out: Record<string, string> = {};
+        for (const k of Object.keys(parsed.bedtimeTexts)) {
+          if (typeof parsed.bedtimeTexts[k] === 'string') out[k] = parsed.bedtimeTexts[k];
+        }
+        return out;
+      })(),
     };
   } catch {
     return null;
@@ -426,6 +569,17 @@ export function reducer(s: AppState, a: Action): AppState {
         streak: newStreak,
         bestStreak: Math.max(prevBest, newStreak),
         nawafelChecks: {},
+        /* Reset new daily fields */
+        heartFeeling: '',
+        heartActionDone: false,
+        familyChecks: {},
+        todayCharityDone: false,
+        selfCareChecks: {},
+        energyLevel: '',
+        relationshipDone: false,
+        lastTenChecks: {},
+        bedtimeRating: 0,
+        bedtimeTexts: {},
       };
     }
     case 'SET_LAST_SEEN_DATE':
@@ -461,6 +615,45 @@ export function reducer(s: AppState, a: Action): AppState {
       return { ...s, prayerMethod: a.method };
     case 'RESET_APP':
       return defaultState();
+    /* ─── NEW ACTIONS ─── */
+    case 'SET_HEART_FEELING':
+      return { ...s, heartFeeling: a.feeling };
+    case 'SET_HEART_ACTION_DONE':
+      return { ...s, heartActionDone: a.done };
+    case 'TOGGLE_FAMILY_CHECK':
+      return { ...s, familyChecks: { ...s.familyChecks, [a.key]: !s.familyChecks[a.key] } };
+    case 'ADD_CHARITY':
+      return { ...s, charityLog: [a.entry, ...s.charityLog], todayCharityDone: true };
+    case 'SET_TODAY_CHARITY_DONE':
+      return { ...s, todayCharityDone: a.done };
+    case 'TOGGLE_SELF_CARE':
+      return { ...s, selfCareChecks: { ...s.selfCareChecks, [a.key]: !s.selfCareChecks[a.key] } };
+    case 'SET_ENERGY_LEVEL':
+      return { ...s, energyLevel: a.level };
+    case 'SET_RELATIONSHIP_DONE':
+      return { ...s, relationshipDone: a.done };
+    case 'TOGGLE_LAST_TEN_CHECK':
+      return { ...s, lastTenChecks: { ...s.lastTenChecks, [a.key]: !s.lastTenChecks[a.key] } };
+    case 'SET_NO_PRESSURE_MODE':
+      return { ...s, noPressureMode: a.enabled };
+    case 'SAVE_JOURNAL':
+      return { ...s, journal: { ...s.journal, [a.date]: a.entry } };
+    case 'SET_SUPPORT_DISMISSED':
+      return { ...s, supportDismissed: a.dismissed };
+    case 'SET_BEDTIME_RATING':
+      return { ...s, bedtimeRating: a.rating };
+    case 'SET_BEDTIME_TEXT':
+      return { ...s, bedtimeTexts: { ...s.bedtimeTexts, [a.key]: a.text } };
+    case 'TOGGLE_DUA_ANSWERED': {
+      const newDuas = [...s.duas];
+      const dua = newDuas[a.i];
+      if (dua) {
+        const now = new Date();
+        const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        newDuas[a.i] = { ...dua, answered: !dua.answered, answeredDate: !dua.answered ? dateStr : undefined };
+      }
+      return { ...s, duas: newDuas };
+    }
     default:
       return s;
   }

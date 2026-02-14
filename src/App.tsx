@@ -10,6 +10,7 @@ import { Star } from './components/Star';
 import { PageLoader } from './components/PageLoader';
 import { initState, reducer, saveState, buildDailySnapshot } from './lib/state';
 import { scheduleNotifications } from './lib/notifications';
+import { getRamadanInfo } from './lib/ramadan';
 import type { AppState } from './lib/state';
 import type { Action } from './lib/state';
 
@@ -198,7 +199,8 @@ function AppContent() {
   }, [state.lastSeenDate, dispatch]);
 
   useEffect(() => {
-    scheduleNotifications(state.duas, state.duaNotificationTime, state.remindersEnabled);
+    const ramInfo = getRamadanInfo();
+    scheduleNotifications(state.duas, state.duaNotificationTime, state.remindersEnabled, ramInfo.day);
   }, [state.duas, state.duaNotificationTime, state.remindersEnabled]);
 
   const isDark = useIsDark();
@@ -233,7 +235,7 @@ function AppContent() {
             <Route path="/subha" render={() => <Suspense fallback={<PageLoader />}><Subha state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/salah" render={() => <Suspense fallback={<PageLoader />}><Salah state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/notes" render={() => <Suspense fallback={<PageLoader />}><Notes state={state} dispatch={dispatch} /></Suspense>} />
-            <Route path="/motivation" render={() => <Suspense fallback={<PageLoader />}><Motivation state={state} /></Suspense>} />
+            <Route path="/motivation" render={() => <Suspense fallback={<PageLoader />}><Motivation state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/weekly" render={() => <Suspense fallback={<PageLoader />}><Weekly state={state} dispatch={dispatch} /></Suspense>} />
             <Route exact path="/" render={() => <Redirect to={state.setupDone ? '/home' : '/setup'} />} />
             <Route render={() => <Redirect to="/" />} />

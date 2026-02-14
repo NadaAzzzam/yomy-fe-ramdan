@@ -10,7 +10,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
-    "build:android": "npm run build && cap sync android"
+    "build:android": "npm run build && cap sync android",
+    "icons:generate": "capacitor-assets generate --android --iconBackgroundColor \"#080E1F\" --iconBackgroundColorDark \"#080E1F\" --splashBackgroundColor \"#080E1F\" --splashBackgroundColorDark \"#080E1F\""
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
@@ -23,6 +24,7 @@
     "react-router-dom": "^5.3.4"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^7.5.0",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",

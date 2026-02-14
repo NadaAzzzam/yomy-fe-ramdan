@@ -127,13 +127,14 @@ body {
   font-family: 'Noto Sans Arabic', 'Tajawal', sans-serif;
 }
 
-/* Page content: responsive padding, no horizontal overflow */
+/* Page content: responsive padding, no horizontal overflow.
+   padding-bottom clears the fixed tab bar so the bottom list is scrollable and tappable on all devices (including Samsung tablets). */
 .ion-content-inner {
   width: 100%;
   max-width: 100%;
   padding-left: max(16px, var(--safe-area-inset-left));
   padding-right: max(16px, var(--safe-area-inset-right));
-  padding-bottom: max(24px, var(--safe-area-inset-bottom));
+  padding-bottom: calc(56px + 20px + var(--safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -174,6 +175,7 @@ body {
   .ion-content-inner {
     padding-left: 8px !important;
     padding-right: 8px !important;
+    padding-bottom: calc(48px + 16px + var(--safe-area-inset-bottom));
   }
   ion-tab-bar {
     min-height: 48px;
@@ -210,12 +212,13 @@ body {
   }
 }
 
-/* Tablets (768px+) */
+/* Tablets (768px+) — extra bottom padding so list clears tab bar on Samsung tablets */
 @media (min-width: 768px) {
   .ion-content-inner {
     max-width: 560px;
     padding-left: 24px;
     padding-right: 24px;
+    padding-bottom: calc(56px + 28px + var(--safe-area-inset-bottom));
   }
   ion-tab-bar {
     max-width: 560px;
@@ -234,6 +237,9 @@ body {
 
 /* ─── Landscape orientation fix ─── */
 @media (orientation: landscape) and (max-height: 500px) {
+  .ion-content-inner {
+    padding-bottom: calc(44px + 12px + var(--safe-area-inset-bottom));
+  }
   ion-tab-bar {
     min-height: 44px;
     padding-bottom: 4px !important;

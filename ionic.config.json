@@ -1,0 +1,7 @@
+{
+  "name": "yomy-fe-ramdan",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite"
+}

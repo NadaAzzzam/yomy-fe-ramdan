@@ -1,0 +1,1 @@
+import{j as a}from"./vendor-Dv0kmEEh.js";import{u as t}from"./index-BCmD13qk.js";function p({children:d,style:s={},glow:r}){const o=t();return a.jsx("div",{style:{background:o.card,borderRadius:20,padding:"16px 18px",border:`1px solid ${r?o.gold+"25":o.border}30`,boxShadow:r?o.cg(o.gold):`0 2px 10px ${o.shadowColor}`,transition:"all .35s",...s},children:d})}export{p as C};

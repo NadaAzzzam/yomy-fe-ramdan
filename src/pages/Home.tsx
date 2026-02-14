@@ -4,6 +4,7 @@ import { IonContent, IonPage } from "@ionic/react";
 import { DynMoon } from "../components/DynMoon";
 import { Card } from "../components/Card";
 import { Sec } from "../components/Sec";
+import { ShareButton } from "../components/ShareButton";
 import { Ring } from "../components/Ring";
 import { Chk } from "../components/Chk";
 import { Confetti } from "../components/Confetti";
@@ -23,17 +24,33 @@ import {
   QURAN_MILESTONES,
 } from "../lib/data";
 import { useHadithOfTheDay, formatHadithText } from "../lib/api";
+import { stripNonQuranicSuffixes } from "../lib/contentPolicy";
 import { fontSans } from "../lib/theme";
 import type { AppState } from "../lib/state";
 import type { Action } from "../lib/state";
 
 const CHALLENGES = [
-  { key: "azkarMorning", icon: "☀️", label: "أذكار الصباح", link: "/subha" as const },
-  { key: "azkarEvening", icon: "🌅", label: "أذكار المساء", link: "/subha" as const },
+  {
+    key: "azkarMorning",
+    icon: "☀️",
+    label: "أذكار الصباح",
+    link: "/subha" as const,
+  },
+  {
+    key: "azkarEvening",
+    icon: "🌅",
+    label: "أذكار المساء",
+    link: "/subha" as const,
+  },
   { key: "qiyam", icon: "🌙", label: "قيام الليل", link: "/more" as const },
   { key: "sadaqa", icon: "💰", label: "صدقة", link: "/more" as const },
   { key: "podcast", icon: "🎙️", label: "بودكاست", link: "/more" as const },
-  { key: "dua", icon: "🤲", label: "الدعاء قبل المغرب", link: "/more" as const },
+  {
+    key: "dua",
+    icon: "🤲",
+    label: "الدعاء قبل المغرب",
+    link: "/more" as const,
+  },
   { key: "tafsir", icon: "📚", label: "تفسير", link: "/more" as const },
 ];
 
@@ -80,37 +97,45 @@ export function Home({ state, dispatch }: HomeProps) {
   ).length;
   const cpct = ac.length > 0 ? Math.round((cd / ac.length) * 100) : 0;
   const xp =
-    cd * 50 + tp * 3 + Object.values(state.subha).reduce((a, b) => a + b, 0) + state.quranMilestoneXP;
+    cd * 50 +
+    tp * 3 +
+    Object.values(state.subha).reduce((a, b) => a + b, 0) +
+    state.quranMilestoneXP;
   const juz = getJuzInfo(state.totalPagesEver + tp);
   const dayIdx = Math.max(0, (info.day ?? new Date().getDate()) - 1);
   const { hadith } = useHadithOfTheDay(dayIdx, HADITHS);
   const todayIbada = DAILY_IBADAAT[dayIdx % DAILY_IBADAAT.length]!;
   const todayTip = DAILY_TIPS[dayIdx % DAILY_TIPS.length]!;
   const todayDhikr = MORNING_ADHKAR[dayIdx % MORNING_ADHKAR.length]!;
-  
+
   const dayHadith = RAMADAN_DAY_HADITHS[dayIdx % RAMADAN_DAY_HADITHS.length]!;
   const todayLearning = DAILY_LEARNING[dayIdx % DAILY_LEARNING.length]!;
   const selectedHeart = HEART_FEELINGS.find((h) => h.id === state.heartFeeling);
-  const noPressureMsg = NO_PRESSURE_MESSAGES[dayIdx % NO_PRESSURE_MESSAGES.length]!;
-  const todayReflection = DAILY_QURAN_REFLECTIONS[dayIdx % DAILY_QURAN_REFLECTIONS.length]!;
-  
+  const noPressureMsg =
+    NO_PRESSURE_MESSAGES[dayIdx % NO_PRESSURE_MESSAGES.length]!;
+  const todayReflection =
+    DAILY_QURAN_REFLECTIONS[dayIdx % DAILY_QURAN_REFLECTIONS.length]!;
+
   // Check for Quran milestones
-  const lastMilestone = QURAN_MILESTONES.filter(m => m.pages <= (state.totalPagesEver + tp))
-    .sort((a, b) => b.pages - a.pages)[0];
-  const nextMilestone = QURAN_MILESTONES.find(m => m.pages > (state.totalPagesEver + tp));
+  const lastMilestone = QURAN_MILESTONES.filter(
+    (m) => m.pages <= state.totalPagesEver + tp,
+  ).sort((a, b) => b.pages - a.pages)[0];
+  const nextMilestone = QURAN_MILESTONES.find(
+    (m) => m.pages > state.totalPagesEver + tp,
+  );
 
   const [conf, setConf] = useState(false);
   const perf = dpct >= 100 && cpct >= 100;
   useEffect(() => {
     if (perf && !conf) setConf(true);
   }, [perf, conf]);
-  
+
   const hdr =
     info.phase === "pre"
       ? `باقي ${info.daysTo} يوم على رمضان`
       : info.phase === "ramadan"
-        ? `${info.day} رمضان ١٤٤٧`
-        : "رمضان كريم — استمر!";
+      ? `${info.day} رمضان ١٤٤٧`
+      : "رمضان كريم — استمر!";
 
   const ibadaColor = t[todayIbada.color];
 
@@ -186,6 +211,7 @@ export function Home({ state, dispatch }: HomeProps) {
           {info.phase === "ramadan" && (
             <div
               style={{
+                position: "relative",
                 textAlign: "center",
                 padding: "8px 16px",
                 margin: "0 0 8px",
@@ -194,6 +220,17 @@ export function Home({ state, dispatch }: HomeProps) {
                 border: `1px solid ${t.gold}15`,
               }}
             >
+              <div style={{ position: "absolute", top: 6, left: 8 }}>
+                <ShareButton
+                  compact
+                  content={{
+                    title: "حديث اليوم",
+                    text: dayHadith.text,
+                    source: dayHadith.source,
+                  }}
+                  style={{ padding: "6px 8px", borderRadius: 10 }}
+                />
+              </div>
               <p
                 style={{
                   fontFamily: "Amiri",
@@ -312,7 +349,9 @@ export function Home({ state, dispatch }: HomeProps) {
                     background: state.heartActionDone
                       ? `${t.green}10`
                       : `${t.purple}10`,
-                    border: `1px solid ${state.heartActionDone ? t.green : t.purple}20`,
+                    border: `1px solid ${
+                      state.heartActionDone ? t.green : t.purple
+                    }20`,
                     cursor: "pointer",
                     transition: "all .25s",
                   }}
@@ -417,7 +456,10 @@ export function Home({ state, dispatch }: HomeProps) {
             >
               <div
                 style={{
-                  width: `${Math.min(100, (xp / Math.max(1, state.level * 800)) * 100)}%`,
+                  width: `${Math.min(
+                    100,
+                    (xp / Math.max(1, state.level * 800)) * 100,
+                  )}%`,
                   height: "100%",
                   background: `linear-gradient(90deg,${t.purple},${t.accent})`,
                   borderRadius: 3,
@@ -670,7 +712,9 @@ export function Home({ state, dispatch }: HomeProps) {
                 ✨
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 10, color: t.accent, fontWeight: 700 }}>
+                <span
+                  style={{ fontSize: 10, color: t.accent, fontWeight: 700 }}
+                >
                   آية اليوم للتدبّر
                 </span>
                 <p
@@ -697,7 +741,7 @@ export function Home({ state, dispatch }: HomeProps) {
                 borderRadius: 10,
               }}
             >
-              "{todayReflection.arabic}"
+              "{stripNonQuranicSuffixes(todayReflection.arabic)}"
             </p>
             <p
               style={{
@@ -735,11 +779,31 @@ export function Home({ state, dispatch }: HomeProps) {
 
           {/* ─── Quran Reading ─── (dynamic: slots or actual pages viewed in Quran app) */}
           <Card glow>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-              <Sec icon="📖" text={`القراءة — ${tp} / ${state.dailyPages} صفحة`} />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 8,
+                marginBottom: 8,
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Sec
+                  icon="📖"
+                  text={`القراءة — ${tp} / ${state.dailyPages} صفحة`}
+                />
+                <span style={{ fontSize: 9, color: t.muted, fontWeight: 600 }}>
+                  هدف اليوم: {state.dailyPages} صفحة
+                </span>
+              </div>
               <button
                 type="button"
-                onClick={() => history.push("/quran")}
+                onClick={() => {
+                  const page = Math.min(604, Math.max(1, state.totalPagesEver + tp));
+                  history.push(`/quran?page=${page}`);
+                }}
                 style={{
                   padding: "6px 14px",
                   borderRadius: 12,
@@ -759,64 +823,91 @@ export function Home({ state, dispatch }: HomeProps) {
               </button>
             </div>
             {effectiveSlots.map((slot, i) => (
-                <div
-                  key={i}
-                  onClick={() => dispatch({ type: "TOGGLE_SLOT", i })}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && dispatch({ type: "TOGGLE_SLOT", i })
-                  }
-                  role="button"
-                  tabIndex={0}
+              <div
+                key={i}
+                onClick={() => dispatch({ type: "TOGGLE_SLOT", i })}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && dispatch({ type: "TOGGLE_SLOT", i })
+                }
+                role="button"
+                tabIndex={0}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  padding: "10px 11px",
+                  borderRadius: 13,
+                  marginBottom: 5,
+                  background: slot.done ? `${t.green}0C` : t.cardAlt,
+                  border: `1px solid ${
+                    slot.done ? t.green + "28" : "transparent"
+                  }`,
+                  cursor: "pointer",
+                  transition: "all .25s",
+                }}
+              >
+                <Chk
+                  done={slot.done}
+                  onClick={(e) => {
+                    e?.stopPropagation?.();
+                    dispatch({ type: "TOGGLE_SLOT", i });
+                  }}
+                />
+                <span style={{ fontSize: 17 }}>{slot.icon}</span>
+                <span
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 9,
-                    padding: "10px 11px",
-                    borderRadius: 13,
-                    marginBottom: 5,
-                    background: slot.done ? `${t.green}0C` : t.cardAlt,
-                    border: `1px solid ${slot.done ? t.green + "28" : "transparent"}`,
-                    cursor: "pointer",
-                    transition: "all .25s",
+                    flex: 1,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: slot.done ? t.green : t.text,
+                    textDecoration: slot.done ? "line-through" : "none",
+                    transition: "color .25s",
                   }}
                 >
-                  <Chk
-                    done={slot.done}
-                    onClick={(e) => {
-                      e?.stopPropagation?.();
-                      dispatch({ type: "TOGGLE_SLOT", i });
-                    }}
-                  />
-                  <span style={{ fontSize: 17 }}>{slot.icon}</span>
-                  <span
-                    style={{
-                      flex: 1,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: slot.done ? t.green : t.text,
-                      textDecoration: slot.done ? "line-through" : "none",
-                      transition: "color .25s",
-                    }}
-                  >
-                    {slot.label}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: slot.done ? t.green : t.muted,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {slot.done ? `${slot.pages} ص ✅` : `${slot.pages} ص`}
-                  </span>
-                </div>
+                  {slot.label}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: slot.done ? t.green : t.muted,
+                    fontWeight: 600,
+                  }}
+                >
+                  {slot.done ? `${slot.pages} ص ✅` : `${slot.pages} ص`}
+                </span>
+              </div>
             ))}
             <div
+              key={`juz-progress-${state.totalPagesEver}-${tp}`}
+              onClick={() => {
+                const page = Math.min(604, Math.max(1, state.totalPagesEver + tp));
+                history.push(`/quran?page=${page}`);
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const page = Math.min(604, Math.max(1, state.totalPagesEver + tp));
+                  history.push(`/quran?page=${page}`);
+                }
+              }}
               style={{
                 background: t.cardAlt,
                 borderRadius: 14,
                 padding: "11px 14px",
                 marginTop: 8,
+                cursor: "pointer",
+                transition: "all .25s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = isDark ? `${t.gold}08` : `${t.gold}0A`;
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = `0 4px 12px ${t.gold}15`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = t.cardAlt;
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
               }}
             >
               <div
@@ -828,11 +919,27 @@ export function Home({ state, dispatch }: HomeProps) {
                   gap: 6,
                 }}
               >
-                <span
-                  style={{ fontSize: 12, fontWeight: 700, color: t.goldLight }}
-                >
-                  الجزء {juz.currentJuz} — {juz.juzName}
-                </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span
+                    style={{ 
+                      fontSize: 12, 
+                      fontWeight: 700, 
+                      color: t.goldLight,
+                      transition: "all .3s ease"
+                    }}
+                  >
+                    الجزء {juz.currentJuz} — {juz.juzName}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: t.muted,
+                      fontWeight: 600,
+                    }}
+                  >
+                    أنت عند صفحة {state.totalPagesEver + tp} من ٦٠٤
+                  </span>
+                </div>
                 <span style={{ fontSize: 12, color: t.gold, fontWeight: 700 }}>
                   {juz.khatmaPct}%
                 </span>
@@ -852,7 +959,7 @@ export function Home({ state, dispatch }: HomeProps) {
                     height: "100%",
                     background: `linear-gradient(90deg,${t.gold},${t.goldLight})`,
                     borderRadius: 3,
-                    transition: "width .6s",
+                    transition: "width .6s ease-out",
                   }}
                 />
               </div>
@@ -880,7 +987,10 @@ export function Home({ state, dispatch }: HomeProps) {
                 )}
                 <button
                   type="button"
-                  onClick={() => dispatch({ type: "RESET_QURAN_PROGRESS" })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dispatch({ type: "RESET_QURAN_PROGRESS" });
+                  }}
                   style={{
                     fontSize: 10,
                     color: t.muted,
@@ -950,7 +1060,8 @@ export function Home({ state, dispatch }: HomeProps) {
                       textAlign: "center",
                     }}
                   >
-                    الهدف التالي: {nextMilestone.title} ({nextMilestone.pages} صفحة)
+                    الهدف التالي: {nextMilestone.title} ({nextMilestone.pages}{" "}
+                    صفحة)
                   </p>
                 )}
               </div>
@@ -1039,10 +1150,20 @@ export function Home({ state, dispatch }: HomeProps) {
 
           {/* ─── Hadith ─── */}
           <Card style={{ marginTop: 12, background: t.gc }}>
-            <div style={{ textAlign: "center" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
               <span style={{ fontSize: 11, color: t.gold, fontWeight: 600 }}>
                 💎 حديث اليوم
               </span>
+              <ShareButton
+                compact
+                content={{
+                  title: "حديث اليوم",
+                  text: formatHadithText(hadith.text),
+                  source: hadith.source,
+                }}
+              />
+            </div>
+            <div style={{ textAlign: "center" }}>
               <p
                 style={{
                   fontFamily: "Amiri",
@@ -1061,7 +1182,7 @@ export function Home({ state, dispatch }: HomeProps) {
             </div>
           </Card>
 
-          {/* ─── Daily Tip ─── */}
+          {/* ─── Daily Tip (Moaazah-like) ─── */}
           <div
             style={{
               marginTop: 12,
@@ -1091,10 +1212,17 @@ export function Home({ state, dispatch }: HomeProps) {
             >
               💡
             </span>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 10, color: t.accent, fontWeight: 700 }}>
-                نصيحة اليوم
-              </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 2 }}>
+                <span style={{ fontSize: 10, color: t.accent, fontWeight: 700 }}>
+                  نصيحة اليوم
+                </span>
+                <ShareButton
+                  compact
+                  content={{ title: "نصيحة اليوم", text: todayTip }}
+                  style={{ padding: "6px 8px", borderRadius: 10, borderColor: `${t.accent}40`, background: `${t.accent}12`, color: t.accent }}
+                />
+              </div>
               <p
                 style={{
                   fontSize: 12,
@@ -1108,9 +1236,18 @@ export function Home({ state, dispatch }: HomeProps) {
             </div>
           </div>
 
-          {/* ─── Daily Learning ─── */}
+          {/* ─── Daily Learning (Moaazah-like) ─── */}
           <Card style={{ marginTop: 12 }}>
-            <Sec icon={todayLearning.icon} text={todayLearning.category} />
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+              <Sec icon={todayLearning.icon} text={todayLearning.category} />
+              <ShareButton
+                compact
+                content={{
+                  title: todayLearning.category + " — " + todayLearning.title,
+                  text: todayLearning.content,
+                }}
+              />
+            </div>
             <p
               style={{
                 fontSize: 14,

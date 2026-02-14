@@ -19,6 +19,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { isContentSafe, filterSafeContent, stripNonQuranicSuffixes } from './contentPolicy';
 
 const HADITH_BASE =
   'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1';
@@ -85,7 +86,7 @@ export async function fetchHadith(
 ): Promise<HadithItem | null> {
   const cacheKey = `hadith:${edition}:${hadithNo}`;
   const cached = getApiCache<HadithItem>(cacheKey);
-  if (cached?.text) return cached;
+  if (cached?.text && isContentSafe(cached.text)) return cached;
   try {
     const url = `${HADITH_BASE}/editions/${edition}/${hadithNo}.min.json`;
     const res = await fetch(url);
@@ -94,6 +95,7 @@ export async function fetchHadith(
     const h = data?.hadiths?.[0];
     const text = h?.text ?? '';
     const bookName = data?.metadata?.name ?? edition;
+    if (!isContentSafe(text)) return null;
     const item: HadithItem = { text, source: bookName };
     setApiCache(cacheKey, item);
     return item;
@@ -113,17 +115,18 @@ export type AthkarItem = { id: string; text: string; counter: number };
 export async function fetchMorningAthkar(): Promise<AthkarItem[]> {
   const cacheKey = 'athkar:morning';
   const cached = getApiCache<AthkarItem[]>(cacheKey);
-  if (Array.isArray(cached) && cached.length > 0) return cached;
+  if (Array.isArray(cached) && cached.length > 0) return filterSafeContent(cached);
   try {
     const res = await fetch(`${ATHKAR_BASE}/morning`);
     if (!res.ok) return [];
     const data = await res.json();
-    const list = Array.isArray(data) ? data : data?.content ?? (data?.id ? [data] : []);
+    let list = Array.isArray(data) ? data : data?.content ?? (data?.id ? [data] : []);
+    list = filterSafeContent(list);
     if (list.length > 0) setApiCache(cacheKey, list);
     return list;
   } catch {
     const fallback = getApiCache<AthkarItem[]>(cacheKey);
-    return Array.isArray(fallback) ? fallback : [];
+    return Array.isArray(fallback) ? filterSafeContent(fallback) : [];
   }
 }
 
@@ -131,17 +134,18 @@ export async function fetchMorningAthkar(): Promise<AthkarItem[]> {
 export async function fetchEveningAthkar(): Promise<AthkarItem[]> {
   const cacheKey = 'athkar:night';
   const cached = getApiCache<AthkarItem[]>(cacheKey);
-  if (Array.isArray(cached) && cached.length > 0) return cached;
+  if (Array.isArray(cached) && cached.length > 0) return filterSafeContent(cached);
   try {
     const res = await fetch(`${ATHKAR_BASE}/night`);
     if (!res.ok) return [];
     const data = await res.json();
-    const list = Array.isArray(data) ? data : data?.content ?? (data?.id ? [data] : []);
+    let list = Array.isArray(data) ? data : data?.content ?? (data?.id ? [data] : []);
+    list = filterSafeContent(list);
     if (list.length > 0) setApiCache(cacheKey, list);
     return list;
   } catch {
     const fallback = getApiCache<AthkarItem[]>(cacheKey);
-    return Array.isArray(fallback) ? fallback : [];
+    return Array.isArray(fallback) ? filterSafeContent(fallback) : [];
   }
 }
 
@@ -564,11 +568,11 @@ export function isQuranPageCached(pageNum: number): boolean {
   return getCachedPage(pageNum) !== null;
 }
 
-/** Fetch one page of the Quran (1–604, Mus'haf layout). Cached for offline. */
+/** Fetch one page of the Quran (1–604, Mus'haf layout). Cached for offline. Ayah text is stripped of non-Quranic suffixes (e.g. وصدق الله العظيم). */
 export async function fetchQuranPage(pageNum: number): Promise<QuranPageData | null> {
   if (pageNum < 1 || pageNum > QURAN_TOTAL_PAGES) return null;
   const cached = getCachedPage(pageNum);
-  if (cached) return cached;
+  if (cached) return stripPageAyahs(cached);
   if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
   try {
     const res = await fetch(`${QURAN_API}/page/${pageNum}`);
@@ -579,7 +583,7 @@ export async function fetchQuranPage(pageNum: number): Promise<QuranPageData | n
     const cleaned: QuranPageData = {
       pageNumber: pageNum,
       ayahs: ayahs.map((a: { text: string; numberInSurah: number; surah: { number: number; name: string } }) => ({
-        text: a.text,
+        text: stripNonQuranicSuffixes(a.text),
         numberInSurah: a.numberInSurah,
         surah: { number: a.surah.number, name: a.surah.name },
       })),
@@ -587,14 +591,22 @@ export async function fetchQuranPage(pageNum: number): Promise<QuranPageData | n
     cachePage(cleaned);
     return cleaned;
   } catch {
-    return getCachedPage(pageNum);
+    const fallback = getCachedPage(pageNum);
+    return fallback ? stripPageAyahs(fallback) : null;
   }
 }
 
-/** Fetch surah text (Hafs/Uthmani) from API with local cache. Returns null on error/offline. */
+function stripPageAyahs(page: QuranPageData): QuranPageData {
+  return {
+    pageNumber: page.pageNumber,
+    ayahs: page.ayahs.map((a) => ({ ...a, text: stripNonQuranicSuffixes(a.text) })),
+  };
+}
+
+/** Fetch surah text (Hafs/Uthmani) from API with local cache. Ayah text is stripped of non-Quranic suffixes. Returns null on error/offline. */
 export async function fetchSurahText(surahNum: number): Promise<QuranAyah[] | null> {
   const cached = getCachedSurah(surahNum);
-  if (cached) return cached;
+  if (cached) return cached.map((a) => ({ ...a, text: stripNonQuranicSuffixes(a.text) }));
   if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
   try {
     const res = await fetch(`${QURAN_API}/surah/${surahNum}`);
@@ -604,13 +616,14 @@ export async function fetchSurahText(surahNum: number): Promise<QuranAyah[] | nu
     if (!Array.isArray(ayahs)) return null;
     const cleaned: QuranAyah[] = ayahs.map((a: { number: number; text: string; numberInSurah: number }) => ({
       number: a.number,
-      text: a.text,
+      text: stripNonQuranicSuffixes(a.text),
       numberInSurah: a.numberInSurah,
     }));
     cacheSurah(surahNum, cleaned);
     return cleaned;
   } catch {
-    return getCachedSurah(surahNum);
+    const fallback = getCachedSurah(surahNum);
+    return fallback ? fallback.map((a) => ({ ...a, text: stripNonQuranicSuffixes(a.text) })) : null;
   }
 }
 

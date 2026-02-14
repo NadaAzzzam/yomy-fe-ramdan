@@ -1,3 +1,9 @@
+/**
+ * Static religious content: hadiths, ibadaat, nawafel, tips, etc.
+ * Curated from Quran and authentic sunnah only — no بدعة (bid'ah).
+ * API-sourced content (hadith/athkar) is filtered in api.ts via contentPolicy.
+ */
+
 export const HADITHS = [
   { text: 'من صام رمضان إيماناً واحتساباً غُفر له ما تقدم من ذنبه', source: 'متفق عليه' },
   { text: 'إن لله عتقاء في كل يوم وليلة من رمضان، وإن لكل مسلم دعوة مستجابة', source: 'أحمد' },

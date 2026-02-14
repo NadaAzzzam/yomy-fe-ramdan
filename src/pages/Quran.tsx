@@ -1,16 +1,19 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useLocation, useHistory } from "react-router-dom";
 import { IonContent, IonPage } from "@ionic/react";
 import { Card } from "../components/Card";
 import { useTheme, useIsDark } from "../context/ThemeContext";
-import {
-  fetchQuranPage,
-  useOnlineStatus,
-  QURAN_TOTAL_PAGES,
-} from "../lib/api";
+import { fetchQuranPage, useOnlineStatus, QURAN_TOTAL_PAGES } from "../lib/api";
 import type { QuranPageData, QuranPageAyah } from "../lib/api";
 import { fontSans } from "../lib/theme";
 import type { AppState } from "../lib/state";
 import type { Action } from "../lib/state";
+
+function getPageFromSearch(search: string): number | null {
+  const p = new URLSearchParams(search).get("page");
+  const n = parseInt(p ?? "", 10);
+  return n >= 1 && n <= QURAN_TOTAL_PAGES ? n : null;
+}
 
 /* ─── Arabic numeral converter ─── */
 const AR_NUMS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
@@ -31,11 +34,13 @@ function PageReader({
   onPageChange,
   state,
   dispatch,
+  previousPage,
 }: {
   pageNum: number;
   onPageChange: (p: number) => void;
   state: AppState;
   dispatch: (a: Action) => void;
+  previousPage: number | null;
 }) {
   const t = useTheme();
   const isDark = useIsDark();
@@ -80,7 +85,11 @@ function PageReader({
     }
   };
 
-  const isLastSavedPage = state.quranLastPage === pageNum;
+  const hasPreviousPage =
+    previousPage != null &&
+    previousPage !== pageNum &&
+    previousPage >= 1 &&
+    previousPage <= QURAN_TOTAL_PAGES;
 
   return (
     <div style={{ paddingBottom: 24 }}>
@@ -236,7 +245,8 @@ function PageReader({
                   pageNum >= QURAN_TOTAL_PAGES ? t.muted + "15" : t.cardAlt,
                 color: pageNum >= QURAN_TOTAL_PAGES ? t.muted : t.text,
                 fontSize: 18,
-                cursor: pageNum >= QURAN_TOTAL_PAGES ? "not-allowed" : "pointer",
+                cursor:
+                  pageNum >= QURAN_TOTAL_PAGES ? "not-allowed" : "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -295,10 +305,10 @@ function PageReader({
             </button>
           </div>
 
-          {/* Return to last saved page hint */}
-          {!isLastSavedPage && state.quranLastPage !== pageNum && (
+          {/* Return to previous page (action before current) */}
+          {hasPreviousPage && (
             <button
-              onClick={() => onPageChange(state.quranLastPage)}
+              onClick={() => onPageChange(previousPage!)}
               style={{
                 marginTop: 12,
                 width: "100%",
@@ -317,7 +327,7 @@ function PageReader({
                 gap: 6,
               }}
             >
-              🔖 العودة لآخر صفحة ({toArabicNum(state.quranLastPage)})
+              🔖 العودة لآخر صفحة ({toArabicNum(previousPage!)})
             </button>
           )}
         </>
@@ -326,16 +336,39 @@ function PageReader({
   );
 }
 
-/* ─── Main Quran Page (opens at last viewed page) ─── */
+/* ─── Main Quran Page (opens at last viewed page or ?page=N from Home) ─── */
 export function Quran({ state, dispatch }: QuranProps) {
   const t = useTheme();
   const isDark = useIsDark();
   const online = useOnlineStatus();
-  const [currentPage, setCurrentPage] = useState(() =>
-    state.quranLastPage >= 1 && state.quranLastPage <= QURAN_TOTAL_PAGES
-      ? state.quranLastPage
-      : 1
+  const location = useLocation();
+  const history = useHistory();
+  const pageFromUrl = useMemo(
+    () => getPageFromSearch(location.search),
+    [location.search],
   );
+  const [currentPage, setCurrentPageState] = useState(() => {
+    if (pageFromUrl !== null) return pageFromUrl;
+    return state.quranLastPage >= 1 && state.quranLastPage <= QURAN_TOTAL_PAGES
+      ? state.quranLastPage
+      : 1;
+  });
+  const [previousPage, setPreviousPage] = useState<number | null>(null);
+
+  // When navigating with ?page=N (e.g. from Home "أنت عند صفحة X"), open at that page and clear the query
+  useEffect(() => {
+    if (pageFromUrl === null) return;
+    setCurrentPageState(pageFromUrl);
+    dispatch({ type: "SET_QURAN_PAGE", page: pageFromUrl });
+    history.replace("/quran");
+  }, [pageFromUrl, dispatch, history]);
+
+  const setCurrentPage = useCallback((page: number) => {
+    setCurrentPageState((prev) => {
+      if (prev !== page) setPreviousPage(prev);
+      return page;
+    });
+  }, []);
 
   return (
     <IonPage>
@@ -345,13 +378,17 @@ export function Quran({ state, dispatch }: QuranProps) {
         style={
           {
             fontFamily: fontSans,
+            position: "relative",
             "--background": t.bg,
             "--ion-background-color": t.bg,
             color: t.text,
           } as React.CSSProperties
         }
       >
-        <div style={{ position: "relative" }}>
+        <div
+          className="ion-content-inner"
+          style={{ position: "relative", pointerEvents: "auto" }}
+        >
           {/* Header */}
           <div style={{ textAlign: "center", padding: "10px 0 12px" }}>
             <span style={{ fontSize: 36 }}>📖</span>
@@ -370,76 +407,90 @@ export function Quran({ state, dispatch }: QuranProps) {
             </p>
           </div>
 
-          {/* Last page bookmark — quick return */}
-          {state.quranLastPage > 0 && (
-            <Card
-              style={{
-                margin: "0 0 12px",
-                padding: "12px 16px",
-                background: isDark
-                  ? `linear-gradient(135deg, ${t.gold}0A, ${t.accent}06)`
-                  : `linear-gradient(135deg, ${t.gold}0E, ${t.accent}08)`,
-                border: `1px solid ${t.gold}20`,
-                cursor: "pointer",
-              }}
-            >
+          {/* Last open page — return to the page before current (action before current action) */}
+          {previousPage != null &&
+            previousPage !== currentPage &&
+            previousPage >= 1 &&
+            previousPage <= QURAN_TOTAL_PAGES && (
               <div
-                onClick={() => setCurrentPage(state.quranLastPage)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
+                role="button"
+                tabIndex={0}
+                onClick={() => setCurrentPage(previousPage)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setCurrentPage(previousPage);
+                  }
                 }}
+                style={{ cursor: "pointer", marginBottom: 12 }}
               >
-                <div
+                <Card
                   style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 12,
-                    background: `${t.gold}18`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 20,
-                    flexShrink: 0,
+                    margin: 0,
+                    padding: "12px 16px",
+                    background: isDark
+                      ? `linear-gradient(135deg, ${t.gold}0A, ${t.accent}06)`
+                      : `linear-gradient(135deg, ${t.gold}0E, ${t.accent}08)`,
+                    border: `1px solid ${t.gold}20`,
                   }}
                 >
-                  🔖
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span
+                  <div
                     style={{
-                      fontSize: 10,
-                      color: t.gold,
-                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
                     }}
                   >
-                    آخر صفحة مفتوحة
-                  </span>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: t.text,
-                      margin: "2px 0 0",
-                    }}
-                  >
-                    صفحة {toArabicNum(state.quranLastPage)} من{" "}
-                    {toArabicNum(QURAN_TOTAL_PAGES)}
-                  </p>
-                </div>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: t.gold,
-                    fontWeight: 700,
-                  }}
-                >
-                  افتح ←
-                </span>
+                    <div
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 12,
+                        background: `${t.gold}18`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 20,
+                        flexShrink: 0,
+                      }}
+                    >
+                      🔖
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          color: t.gold,
+                          fontWeight: 700,
+                        }}
+                      >
+                        آخر صفحة مفتوحة
+                      </span>
+                      <p
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: t.text,
+                          margin: "2px 0 0",
+                        }}
+                      >
+                        صفحة {toArabicNum(previousPage)} من{" "}
+                        {toArabicNum(QURAN_TOTAL_PAGES)}
+                      </p>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: t.gold,
+                        fontWeight: 700,
+                      }}
+                    >
+                      افتح ←
+                    </span>
+                  </div>
+                </Card>
               </div>
-            </Card>
-          )}
+            )}
 
           {!online && (
             <div
@@ -466,6 +517,7 @@ export function Quran({ state, dispatch }: QuranProps) {
             onPageChange={setCurrentPage}
             state={state}
             dispatch={dispatch}
+            previousPage={previousPage}
           />
 
           <div style={{ height: 20 }} />

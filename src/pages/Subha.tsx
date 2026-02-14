@@ -2,6 +2,7 @@ import { useState } from "react";
 import { IonContent, IonPage } from "@ionic/react";
 import { Card } from "../components/Card";
 import { Sec } from "../components/Sec";
+import { ShareButton } from "../components/ShareButton";
 import { Ring } from "../components/Ring";
 import { useTheme } from "../context/ThemeContext";
 import { fontSans } from "../lib/theme";
@@ -553,7 +554,19 @@ export function Subha({ state, dispatch }: SubhaProps) {
           </div>
 
           <Card style={{ marginTop: 14 }}>
-            <Sec icon="📜" text="أحاديث في الذكر والتسبيح" />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+              <Sec icon="📜" text="أحاديث في الذكر والتسبيح" />
+              {!dhikrHadithLoading && (
+                <ShareButton
+                  compact
+                  content={{
+                    title: "حديث في الذكر والتسبيح",
+                    text: formatHadithText(dhikrHadith.text),
+                    source: dhikrHadith.source,
+                  }}
+                />
+              )}
+            </div>
             <div
               style={{
                 overflow: "hidden",

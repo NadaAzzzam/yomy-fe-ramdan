@@ -554,8 +554,19 @@ export function buildDailySnapshot(s: AppState): DailySnapshot {
 
 export function reducer(s: AppState, a: Action): AppState {
   switch (a.type) {
-    case 'SET_PAGES':
-      return { ...s, dailyPages: a.v };
+    case 'SET_PAGES': {
+      const newDaily = a.v;
+      const ps = Math.ceil(newDaily / Math.max(1, s.readingTimes.length));
+      const newSlots =
+        s.todaySlots.length === s.readingTimes.length
+          ? s.todaySlots.map((sl) => ({ ...sl, pages: ps }))
+          : s.readingTimes.map((t, idx) => {
+              const ex = s.todaySlots[idx];
+              const match = ex && ex.label === t.label && ex.icon === t.icon ? ex : null;
+              return { ...t, done: match?.done ?? false, pages: ps };
+            });
+      return { ...s, dailyPages: newDaily, todaySlots: newSlots };
+    }
     case 'ADD_TIME': {
       const nextTimes = [...s.readingTimes, a.t];
       const ps = Math.ceil(s.dailyPages / Math.max(1, nextTimes.length));

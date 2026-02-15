@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { IonIcon, IonActionSheet } from "@ionic/react";
-import { shareSocialOutline } from "ionicons/icons";
+import { shareSocialOutline, chatbubbleOutline, imageOutline } from "ionicons/icons";
 import { useTheme } from "../context/ThemeContext";
 import {
   shareAsText,
@@ -77,12 +77,12 @@ export function ShareButton({
         buttons={[
           {
             text: "مشاركة كنص (واتساب، رسالة…)",
-            icon: "chatbubble-outline",
+            icon: chatbubbleOutline,
             handler: () => handleShare("text"),
           },
           {
             text: "مشاركة كصورة (ستوري، حفظ صورة)",
-            icon: "image-outline",
+            icon: imageOutline,
             handler: () => handleShare("image"),
           },
           { text: "إلغاء", role: "cancel" },

@@ -5,6 +5,13 @@ import { fontSans } from "../lib/theme";
 
 const MENU_ITEMS = [
   {
+    path: "/adhkar",
+    icon: "🤲",
+    label: "الأذكار",
+    desc: "أذكار يومية من الكتاب والسنة",
+    color: "gold",
+  },
+  {
     path: "/notes",
     icon: "📓",
     label: "دفتر",

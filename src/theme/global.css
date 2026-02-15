@@ -391,6 +391,15 @@ body {
   }
 }
 
+/* ─── Adhkar card tap feedback ─── */
+.adhkar-card {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.adhkar-card:active {
+  transform: scale(0.97) !important;
+}
+
 /* Touch-friendly tap targets */
 button,
 [role="button"] {

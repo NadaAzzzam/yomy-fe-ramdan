@@ -45,7 +45,7 @@ export const LAST_TEN_NIGHTS_REMINDERS: string[] = [
   '💎 لا تضيّع ليالي العشر — كل ليلة ممكن تكون ليلة القدر',
 ];
 
-/** Salah ala el naby messages */
+/** Salah ala el naby messages (text only - audio played separately) */
 export const SALAH_ALA_NABY_MESSAGES: string[] = [
   'اللهم صل على محمد وعلى آل محمد كما صليت على إبراهيم وعلى آل إبراهيم',
   'اللهم بارك على محمد وعلى آل محمد كما باركت على إبراهيم وعلى آل إبراهيم',
@@ -53,6 +53,9 @@ export const SALAH_ALA_NABY_MESSAGES: string[] = [
   'اللهم صل وسلم وبارك على سيدنا محمد',
   'اللهم صل على محمد النبي الأمي وعلى آله وصحبه وسلم تسليماً',
 ];
+
+/** Audio file for Salah ala el Naby (place in public/audio/ folder) */
+export const SALAH_ALA_NABY_AUDIO = '/audio/salah-ala-naby.mp3';
 
 // Notification channel IDs
 const CHANNEL_DUA = 1000;
@@ -284,6 +287,22 @@ export async function scheduleNotifications(
   }
 }
 
+/** Play audio file for Salah ala el Naby notification */
+export async function playSalahAlaNabyAudio(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const audio = new Audio(SALAH_ALA_NABY_AUDIO);
+    audio.volume = 1.0;
+    await audio.play();
+  } catch (error) {
+    console.error('Failed to play Salah ala el Naby audio:', error);
+    // Fallback to text-to-speech if audio file is not found
+    const fallbackText = 'اللهم صل على محمد وعلى آل محمد';
+    await speakNotificationText(fallbackText);
+  }
+}
+
 /** Speak notification text using Text-to-Speech (Arabic voice) */
 export async function speakNotificationText(text: string): Promise<void> {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -312,7 +331,7 @@ export async function speakNotificationText(text: string): Promise<void> {
 }
 
 /**
- * Set up notification listeners to trigger text-to-speech when notifications are received/clicked.
+ * Set up notification listeners to trigger audio/text-to-speech when notifications are received/clicked.
  * Call this once during app initialization.
  */
 export function setupNotificationListeners(voiceEnabled: boolean): void {
@@ -321,14 +340,24 @@ export function setupNotificationListeners(voiceEnabled: boolean): void {
   // Listen for when notification is received (shown)
   LocalNotifications.addListener('localNotificationReceived', (notification) => {
     if (voiceEnabled && notification.body) {
-      speakNotificationText(notification.body);
+      // Check if this is a Salah ala el Naby notification (ID range 5000-5020)
+      if (notification.id >= CHANNEL_SALAH_ALA_NABY_START && notification.id < CHANNEL_SALAH_ALA_NABY_START + 20) {
+        playSalahAlaNabyAudio();
+      } else {
+        speakNotificationText(notification.body);
+      }
     }
   });
   
   // Listen for when user taps on notification
   LocalNotifications.addListener('localNotificationActionPerformed', (notificationAction) => {
     if (voiceEnabled && notificationAction.notification.body) {
-      speakNotificationText(notificationAction.notification.body);
+      // Check if this is a Salah ala el Naby notification (ID range 5000-5020)
+      if (notificationAction.notification.id >= CHANNEL_SALAH_ALA_NABY_START && notificationAction.notification.id < CHANNEL_SALAH_ALA_NABY_START + 20) {
+        playSalahAlaNabyAudio();
+      } else {
+        speakNotificationText(notificationAction.notification.body);
+      }
     }
   });
 }

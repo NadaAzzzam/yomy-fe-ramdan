@@ -17,6 +17,7 @@ import type { Action } from './lib/state';
 const Setup = lazy(() => import('./pages/Setup').then(m => ({ default: m.Setup })));
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 const Subha = lazy(() => import('./pages/Subha').then(m => ({ default: m.Subha })));
+const Adhkar = lazy(() => import('./pages/Adhkar').then(m => ({ default: m.Adhkar })));
 const Notes = lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })));
 const Motivation = lazy(() => import('./pages/Motivation').then(m => ({ default: m.Motivation })));
 const Weekly = lazy(() => import('./pages/Weekly').then(m => ({ default: m.Weekly })));
@@ -247,6 +248,7 @@ function AppContent() {
             <Route path="/setup" render={() => <Suspense fallback={<PageLoader />}><Setup state={state} dispatch={dispatch} onFinish={onFinishSetup} onResetApp={onResetApp} /></Suspense>} />
             <Route path="/home" render={() => <Suspense fallback={<PageLoader />}><Home state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/subha" render={() => <Suspense fallback={<PageLoader />}><Subha state={state} dispatch={dispatch} /></Suspense>} />
+            <Route path="/adhkar" render={() => <Suspense fallback={<PageLoader />}><Adhkar /></Suspense>} />
             <Route path="/salah" render={() => <Suspense fallback={<PageLoader />}><Salah state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/quran" render={() => <Suspense fallback={<PageLoader />}><QuranPage state={state} dispatch={dispatch} /></Suspense>} />
             <Route path="/more" render={() => <Suspense fallback={<PageLoader />}><MorePage /></Suspense>} />

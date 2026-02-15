@@ -1,10 +1,14 @@
 /**
  * Notifications: random dua at user-chosen time + Egyptian Arabic reminder messages.
  * Uses Capacitor Local Notifications for native support (works when app is closed).
+ * Android: createChannel ensures notifications work in background/closed; SCHEDULE_EXACT_ALARM in manifest for exact timing.
  */
 
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+
+/** Default Android channel ID (must match channel we create). */
+const ANDROID_CHANNEL_ID = 'yomy_default';
 
 export const REMINDER_MESSAGES_AR: string[] = [
   'تعالى افتح التطبيق واكمل مهامك 🌙',
@@ -74,6 +78,23 @@ export const NOTIFICATION_INTERVALS = [
   { value: 120, label: 'ساعتين' },
 ] as const;
 
+/** Create Android notification channel (required for Android 8+ so notifications show when app is background/closed). */
+async function ensureAndroidChannel(): Promise<void> {
+  if (Capacitor.getPlatform() !== 'android') return;
+  try {
+    await LocalNotifications.createChannel({
+      id: ANDROID_CHANNEL_ID,
+      name: 'يومي في رمضان',
+      description: 'تذكيرات الدعاء والتسبيح ورمضان',
+      importance: 4, // IMPORTANCE_HIGH
+      sound: 'beep.wav',
+      visibility: 1,
+    });
+  } catch (e) {
+    console.warn('Could not create notification channel:', e);
+  }
+}
+
 /** Request permission for notifications. Returns true if granted. */
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
@@ -87,6 +108,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
   }
 
   try {
+    await ensureAndroidChannel();
     const result = await LocalNotifications.requestPermissions();
     return result.display === 'granted';
   } catch (error) {
@@ -126,11 +148,15 @@ function getDateAfterMinutes(minutes: number): Date {
   return new Date(now.getTime() + minutes * 60 * 1000);
 }
 
+/** App logo URL for web notifications (shows in notification list instead of default icon). */
+const WEB_NOTIFICATION_ICON = '/logo.svg';
+
 /** Show a web notification (fallback for web platform) */
 function showWebNotification(title: string, body: string): void {
   if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;
   try {
-    new Notification(title, { body, icon: '/favicon.ico' });
+    const icon = typeof window !== 'undefined' && window.location?.origin ? `${window.location.origin}${WEB_NOTIFICATION_ICON}` : WEB_NOTIFICATION_ICON;
+    new Notification(title, { body, icon });
   } catch {
     // ignore
   }
@@ -264,13 +290,24 @@ export async function scheduleNotifications(
   if (notifications.length > 0) {
     if (Capacitor.isNativePlatform()) {
       try {
+        await ensureAndroidChannel();
+        const isAndroid = Capacitor.getPlatform() === 'android';
         await LocalNotifications.schedule({
           notifications: notifications.map(n => ({
             id: n.id,
             title: n.title,
             body: n.body,
-            schedule: n.schedule,
+            schedule: {
+              ...n.schedule,
+              allowWhileIdle: true,
+            },
             ...(n.silent !== undefined && { silent: n.silent }),
+            ...(isAndroid && {
+              channelId: ANDROID_CHANNEL_ID,
+              smallIcon: 'ic_notification',
+              largeIcon: 'ic_launcher_foreground',
+              iconColor: '#D4A84B',
+            }),
           })),
         });
         console.log(`Scheduled ${notifications.length} notifications`);

@@ -27,7 +27,7 @@ function buildTasbihat(t: ReturnType<typeof useTheme>): TasbihItem[] {
       id: "subhanallah",
       label: "سبحان الله",
       arabic: "سُبْحَانَ اللَّه",
-      target: 33,
+      target: 100,
       color: t.gold,
       icon: "✨",
       reward: "غُرست له نخلة في الجنة",
@@ -36,19 +36,19 @@ function buildTasbihat(t: ReturnType<typeof useTheme>): TasbihItem[] {
       id: "alhamdulillah",
       label: "الحمد لله",
       arabic: "الْحَمْدُ لِلَّه",
-      target: 33,
+      target: 100,
       color: t.green,
       icon: "💚",
-      reward: "تملأ الميزان",
+      reward: "تملأ الميزان — ٣٣ مفضلة بعد الصلاة",
     },
     {
       id: "allahuakbar",
       label: "الله أكبر",
       arabic: "اللَّهُ أَكْبَر",
-      target: 33,
+      target: 100,
       color: t.orange,
       icon: "🔥",
-      reward: "تملأ ما بين السماء والأرض",
+      reward: "تملأ ما بين السماء والأرض — ٣٣ مفضلة بعد الصلاة",
     },
     {
       id: "istighfar",
@@ -98,14 +98,15 @@ function buildTasbihat(t: ReturnType<typeof useTheme>): TasbihItem[] {
   ];
 }
 
-const QUICK_TASBIH = [
-  { label: "سبحان الله ×٣٣", id: "subhanallah" as const, n: 33, icon: "✨" },
-  { label: "الحمد لله ×٣٣", id: "alhamdulillah" as const, n: 33, icon: "💚" },
-  { label: "الله أكبر ×٣٣", id: "allahuakbar" as const, n: 33, icon: "🔥" },
-  { label: "استغفار ×١٠٠", id: "istighfar" as const, n: 100, icon: "🤲" },
-  { label: "حوقلة ×١٠٠", id: "hawqala" as const, n: 100, icon: "💎" },
-  { label: "صلاة على النبي ×١٠٠", id: "salawat" as const, n: 100, icon: "🕌" },
-];
+/** Quick tasbih buttons — same targets as main list so الليست تحت = الليست فوق */
+function getQuickTasbih(tasbihat: TasbihItem[]) {
+  return tasbihat.map((tb) => ({
+    label: tb.target === 100 ? `${tb.label} ×١٠٠` : `${tb.label} ×${tb.target}`,
+    id: tb.id,
+    n: tb.target,
+    icon: tb.icon,
+  }));
+}
 
 /** Hadiths about dhikr and remembrance of Allah (الذكر والذاكرون) */
 const DHIKR_HADITHS: { text: string; source: string }[] = [
@@ -155,7 +156,7 @@ export function Subha({ state, dispatch }: SubhaProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [pulse, setPulse] = useState(false);
   const [hadithIdx, setHadithIdx] = useState(0);
-  const { hadith: dhikrHadith, loading: dhikrHadithLoading } = useDhikrHadith(
+  const { hadith: dhikrHadith, loading: dhikrHadithLoading, dorarVerified: dhikrDorarVerified } = useDhikrHadith(
     hadithIdx,
     DHIKR_HADITHS,
   );
@@ -164,6 +165,7 @@ export function Subha({ state, dispatch }: SubhaProps) {
   const count = state.subha[active.id] || 0;
   const pct = Math.min(100, Math.round((count / active.target) * 100));
   const totalToday = Object.values(state.subha).reduce((a, b) => a + b, 0);
+  const quickTasbih = getQuickTasbih(tasbihat);
   const completedCount = tasbihat.filter(
     (tb) => (state.subha[tb.id] || 0) >= tb.target,
   ).length;
@@ -378,10 +380,13 @@ export function Subha({ state, dispatch }: SubhaProps) {
               </Ring>
             </div>
 
-            <p style={{ fontSize: 12, color: t.muted, margin: "0 0 10px" }}>
+            <p style={{ fontSize: 12, color: t.muted, margin: "0 0 6px" }}>
               {count >= active.target
                 ? "🎉 مكتمل — ما شاء الله!"
                 : "اضغط على الدائرة للعد"}
+            </p>
+            <p style={{ fontSize: 10, color: t.muted, margin: "0 0 10px", opacity: 0.85 }}>
+              العداد يُحفظ ولا يُصفّر عند إغلاق التطبيق. للإعادة: زر إعادة بجانب كل تسبيح.
             </p>
 
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
@@ -455,12 +460,24 @@ export function Subha({ state, dispatch }: SubhaProps) {
                 >
                   "{active.reward}"
                 </p>
+                {active.id === "subhanallah" && (
+                  <p
+                    style={{
+                      fontSize: 11,
+                      color: t.muted,
+                      margin: "8px 0 0",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    حديث: من قال سبحان الله وبحمده غُرست له نخلة في الجنة — أي لكل تسبيحة نخلة، وليس الثلاث والثلاثون بنخلة واحدة.
+                  </p>
+                )}
               </div>
             )}
           </Card>
 
           <Card style={{ marginTop: 12 }}>
-            <Sec icon="⚡" text="تسبيح سريع" />
+            <Sec icon="⚡" text="تسبيح سريع (نفس الأعداد أعلاه)" />
             <div
               style={{
                 display: "grid",
@@ -468,7 +485,7 @@ export function Subha({ state, dispatch }: SubhaProps) {
                 gap: 8,
               }}
             >
-              {QUICK_TASBIH.map((q, i) => {
+              {quickTasbih.map((q, i) => {
                 const cnt = state.subha[q.id] || 0;
                 const done = cnt >= q.n;
                 return (
@@ -617,6 +634,9 @@ export function Subha({ state, dispatch }: SubhaProps) {
                       }}
                     >
                       — {dhikrHadith.source}
+                      {dhikrDorarVerified === true && (
+                        <span style={{ marginRight: 6, color: t.green, fontWeight: 600 }}> • صحيح حسب الدرر</span>
+                      )}
                     </p>
                   </>
                 )}

@@ -5,6 +5,7 @@ import { Card } from "../components/Card";
 import { useTheme, useIsDark } from "../context/ThemeContext";
 import { fetchQuranPage, useOnlineStatus, QURAN_TOTAL_PAGES } from "../lib/api";
 import type { QuranPageData, QuranPageAyah } from "../lib/api";
+import { getJuzByPage, getJuzStartPage } from "../lib/juz";
 import { fontSans } from "../lib/theme";
 import type { AppState } from "../lib/state";
 import type { Action } from "../lib/state";
@@ -49,6 +50,7 @@ function PageReader({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [jumpInput, setJumpInput] = useState("");
+  const [juzSelect, setJuzSelect] = useState("");
 
   const loadPage = useCallback(() => {
     setLoading(true);
@@ -149,6 +151,20 @@ function PageReader({
 
       {!loading && !error && pageData && (
         <>
+          {/* Surah & Juz label */}
+          {pageData.ayahs.length > 0 && (
+            <p
+              style={{
+                fontSize: 12,
+                color: t.gold,
+                fontWeight: 700,
+                margin: "0 0 10px",
+                textAlign: "center",
+              }}
+            >
+              سورة {pageData.ayahs[0].surah.name} — جزء {toArabicNum(getJuzByPage(pageNum))}
+            </p>
+          )}
           {/* Mushaf-style page */}
           <div
             style={{
@@ -257,7 +273,7 @@ function PageReader({
             </button>
           </div>
 
-          {/* Jump to page */}
+          {/* Jump to page or juz */}
           <div
             style={{
               display: "flex",
@@ -287,6 +303,33 @@ function PageReader({
                 textAlign: "center",
               }}
             />
+            <select
+              value={juzSelect}
+              onChange={(e) => {
+                const v = e.target.value;
+                setJuzSelect("");
+                const j = parseInt(v, 10);
+                if (j >= 1 && j <= 30) onPageChange(getJuzStartPage(j));
+              }}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: `1px solid ${t.border}50`,
+                background: t.inputBg,
+                color: t.text,
+                fontSize: 12,
+                fontFamily: fontSans,
+                outline: "none",
+                minWidth: 100,
+              }}
+            >
+              <option value="">جزء معيّن</option>
+              {Array.from({ length: 30 }, (_, i) => i + 1).map((j) => (
+                <option key={j} value={j}>
+                  جزء {toArabicNum(j)}
+                </option>
+              ))}
+            </select>
             <button
               onClick={goToPage}
               style={{

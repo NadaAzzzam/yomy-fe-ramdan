@@ -20,6 +20,7 @@
 
 import { useState, useEffect } from 'react';
 import { isContentSafe, filterSafeContent, stripNonQuranicSuffixes } from './contentPolicy';
+import { verifyHadithWithDorar, isKnownSahihSource } from './dorar';
 
 const HADITH_BASE =
   'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1';
@@ -69,7 +70,7 @@ function endOfTodayMs(): number {
   return d.getTime();
 }
 
-export type HadithItem = { text: string; source: string };
+export type HadithItem = { text: string; source: string; dorarVerified?: boolean };
 
 /** Render hadith HTML safely: <br> → line break, strip other tags. Use with whiteSpace: 'pre-line'. */
 export function formatHadithText(html: string): string {
@@ -149,28 +150,54 @@ export async function fetchEveningAthkar(): Promise<AthkarItem[]> {
   }
 }
 
-/** React hook: hadith of the day from API with local fallback */
+/** React hook: hadith of the day from API with local fallback. Verifies with Dorar when source is not known Sahih. */
 export function useHadithOfTheDay(
   dayIndex: number,
   localHadiths: HadithItem[]
-): { hadith: HadithItem; loading: boolean } {
-  const [hadith, setHadith] = useState<HadithItem>(() => localHadiths[dayIndex % localHadiths.length]!);
+): { hadith: HadithItem; loading: boolean; dorarVerified: boolean | null } {
+  const [hadith, setHadith] = useState<HadithItem>(() => ({
+    ...localHadiths[dayIndex % localHadiths.length]!,
+    dorarVerified: undefined,
+  }));
   const [loading, setLoading] = useState(true);
+  const [dorarVerified, setDorarVerified] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setDorarVerified(null);
     const no = hadithNoFromDayIndex(dayIndex);
     fetchHadith('ara-bukhari', no).then((h) => {
       if (cancelled) return;
-      if (h?.text) setHadith(h);
-      else setHadith(localHadiths[dayIndex % localHadiths.length]!);
+      if (h?.text) {
+        const fromSahihBook = isKnownSahihSource(h.source);
+        setHadith({ ...h, dorarVerified: fromSahihBook });
+        setDorarVerified(fromSahihBook ? true : null);
+      } else {
+        const fallback = localHadiths[dayIndex % localHadiths.length]!;
+        setHadith({ ...fallback, dorarVerified: undefined });
+        setDorarVerified(null);
+      }
       setLoading(false);
     });
     return () => { cancelled = true; };
   }, [dayIndex, localHadiths]);
 
-  return { hadith, loading };
+  // Background Dorar verification for hadiths not from known Sahih books
+  useEffect(() => {
+    if (!hadith?.text || loading) return;
+    if (isKnownSahihSource(hadith.source)) {
+      setDorarVerified(true);
+      return;
+    }
+    let cancelled = false;
+    verifyHadithWithDorar(hadith.text).then((r) => {
+      if (!cancelled) setDorarVerified(r.verified);
+    });
+    return () => { cancelled = true; };
+  }, [hadith?.text, hadith?.source, loading]);
+
+  return { hadith, loading, dorarVerified };
 }
 
 /* ─── Prayer Times (Aladhan API) ─── */
@@ -642,28 +669,49 @@ export function useOnlineStatus(): boolean {
   return online;
 }
 
-/** React hook: one hadith for Subha "dhikr hadiths" carousel. Fetches by index from Forty Hadith Nawawi (1–42), fallback to local list. */
+/** React hook: one hadith for Subha "dhikr hadiths" carousel. Fetches by index from Forty Hadith Nawawi (1–42), fallback to local list. Verifies with Dorar when using fallback. */
 export function useDhikrHadith(
   hadithIdx: number,
   fallbackList: HadithItem[]
-): { hadith: HadithItem; loading: boolean } {
-  const [hadith, setHadith] = useState<HadithItem>(() => fallbackList[0]!);
+): { hadith: HadithItem; loading: boolean; dorarVerified: boolean | null } {
+  const [hadith, setHadith] = useState<HadithItem>(() => ({ ...fallbackList[0]!, dorarVerified: undefined }));
   const [loading, setLoading] = useState(true);
+  const [dorarVerified, setDorarVerified] = useState<boolean | null>(null);
 
   useEffect(() => {
     const newFallback = fallbackList[hadithIdx % fallbackList.length] ?? fallbackList[0]!;
-    setHadith(newFallback);
+    setHadith({ ...newFallback, dorarVerified: undefined });
     setLoading(true);
+    setDorarVerified(null);
     let cancelled = false;
     const hadithNo = (hadithIdx % 42) + 1;
     fetchHadith('ara-nawawi', hadithNo).then((h) => {
       if (cancelled) return;
-      if (h?.text) setHadith(h);
-      else setHadith(newFallback);
+      if (h?.text) {
+        const fromSahih = isKnownSahihSource(h.source);
+        setHadith({ ...h, dorarVerified: fromSahih });
+        setDorarVerified(fromSahih ? true : null);
+      } else {
+        setHadith({ ...newFallback, dorarVerified: undefined });
+        setDorarVerified(null);
+      }
       setLoading(false);
     });
     return () => { cancelled = true; };
   }, [hadithIdx, fallbackList]);
 
-  return { hadith, loading };
+  useEffect(() => {
+    if (!hadith?.text || loading) return;
+    if (isKnownSahihSource(hadith.source)) {
+      setDorarVerified(true);
+      return;
+    }
+    let cancelled = false;
+    verifyHadithWithDorar(hadith.text).then((r) => {
+      if (!cancelled) setDorarVerified(r.verified);
+    });
+    return () => { cancelled = true; };
+  }, [hadith?.text, hadith?.source, loading]);
+
+  return { hadith, loading, dorarVerified };
 }

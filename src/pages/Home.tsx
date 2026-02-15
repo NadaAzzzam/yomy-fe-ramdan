@@ -25,6 +25,7 @@ import {
   QURAN_MILESTONES,
 } from "../lib/data";
 import { useHadithOfTheDay, formatHadithText } from "../lib/api";
+import { verifyHadithWithDorar, isKnownSahihSource } from "../lib/dorar";
 import { stripNonQuranicSuffixes } from "../lib/contentPolicy";
 import { fontSans } from "../lib/theme";
 import type { AppState } from "../lib/state";
@@ -43,8 +44,8 @@ const CHALLENGES = [
     label: "أذكار المساء",
     link: "/adhkar" as const,
   },
-  { key: "qiyam", icon: "🌙", label: "قيام الليل", link: "/more" as const },
-  { key: "sadaqa", icon: "💰", label: "صدقة", link: "/more" as const },
+  { key: "qiyam", icon: "🌙", label: "قيام الليل", link: "/more#qiyam" as const },
+  { key: "sadaqa", icon: "💰", label: "صدقة", link: "/more#sadaqa" as const },
   { key: "podcast", icon: "🎙️", label: "بودكاست", link: "/more" as const },
   {
     key: "dua",
@@ -106,7 +107,7 @@ export function Home({ state, dispatch }: HomeProps) {
     state.quranMilestoneXP;
   const juz = getJuzInfo(state.totalPagesEver + tp);
   const dayIdx = Math.max(0, (info.day ?? new Date().getDate()) - 1);
-  const { hadith } = useHadithOfTheDay(dayIdx, HADITHS);
+  const { hadith, dorarVerified } = useHadithOfTheDay(dayIdx, HADITHS);
   const todayIbada = DAILY_IBADAAT[dayIdx % DAILY_IBADAAT.length]!;
   const todayTip = DAILY_TIPS[dayIdx % DAILY_TIPS.length]!;
 
@@ -138,6 +139,18 @@ export function Home({ state, dispatch }: HomeProps) {
   };
 
   const dayHadith = RAMADAN_DAY_HADITHS[dayIdx % RAMADAN_DAY_HADITHS.length]!;
+  const [dayHadithDorarVerified, setDayHadithDorarVerified] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (isKnownSahihSource(dayHadith.source)) {
+      setDayHadithDorarVerified(true);
+      return;
+    }
+    let cancelled = false;
+    verifyHadithWithDorar(dayHadith.text).then((r) => {
+      if (!cancelled) setDayHadithDorarVerified(r.verified);
+    });
+    return () => { cancelled = true; };
+  }, [dayHadith.text, dayHadith.source]);
   const todayLearning = DAILY_LEARNING[dayIdx % DAILY_LEARNING.length]!;
   const selectedHeart = HEART_FEELINGS.find((h) => h.id === state.heartFeeling);
   const noPressureMsg =
@@ -284,6 +297,9 @@ export function Home({ state, dispatch }: HomeProps) {
               </p>
               <p style={{ fontSize: 9, color: t.muted, margin: 0 }}>
                 — {dayHadith.source}
+                {dayHadithDorarVerified === true && (
+                  <span style={{ marginRight: 4, color: t.green, fontWeight: 600 }}> • صحيح حسب الدرر</span>
+                )}
               </p>
             </div>
           )}
@@ -533,13 +549,13 @@ export function Home({ state, dispatch }: HomeProps) {
                   / {state.dailyPages} صفحة
                 </span>
               </Ring>
-              {tp > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
                 <button
                   type="button"
-                  onClick={() => dispatch({ type: "RESET_TODAY_READING" })}
+                  onClick={() => history.push("/setup")}
                   style={{
                     fontSize: 10,
-                    color: t.muted,
+                    color: t.gold,
                     background: "transparent",
                     border: "none",
                     fontFamily: fontSans,
@@ -548,9 +564,27 @@ export function Home({ state, dispatch }: HomeProps) {
                     textDecoration: "underline",
                   }}
                 >
-                  إعادة القراءة اليوم
+                  تعديل هدف القراءة
                 </button>
-              )}
+                {tp > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "RESET_TODAY_READING" })}
+                    style={{
+                      fontSize: 10,
+                      color: t.muted,
+                      background: "transparent",
+                      border: "none",
+                      fontFamily: fontSans,
+                      cursor: "pointer",
+                      padding: 0,
+                      textDecoration: "underline",
+                    }}
+                  >
+                    إعادة القراءة اليوم
+                  </button>
+                )}
+              </div>
             </div>
             <Ring pct={cpct} size={112} stroke={8} color={t.green} pulse>
               <span style={{ fontSize: 24, fontWeight: 800, color: t.green }}>
@@ -1221,6 +1255,9 @@ export function Home({ state, dispatch }: HomeProps) {
               </p>
               <p style={{ fontSize: 10, color: t.muted, margin: 0 }}>
                 — {hadith.source}
+                {dorarVerified === true && (
+                  <span style={{ marginRight: 6, color: t.green, fontWeight: 600 }}> • صحيح حسب الدرر</span>
+                )}
               </p>
             </div>
           </Card>

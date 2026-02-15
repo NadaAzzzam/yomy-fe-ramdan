@@ -175,6 +175,9 @@ export function Weekly({ state, dispatch }: WeeklyProps) {
             >
               📊 التقرير الأسبوعي
             </h2>
+            <p style={{ fontSize: 10, color: t.muted, margin: "4px 8px 0", maxWidth: 280, marginLeft: "auto", marginRight: "auto" }}>
+              النسبة اليومية = متوسط (نسبة القرآن + نسبة التحديات). قيام الليل ضمن التحديات.
+            </p>
             {hasHistory ? (
               <button
                 type="button"
@@ -274,7 +277,7 @@ export function Weekly({ state, dispatch }: WeeklyProps) {
                     style={{
                       width: "100%",
                       maxWidth: 26,
-                      height: `${(r.pct / 100) * 75}px`,
+                      height: `${Math.max(4, (r.pct / 100) * 75)}px`,
                       borderRadius: 7,
                       background:
                         r.pct === 100

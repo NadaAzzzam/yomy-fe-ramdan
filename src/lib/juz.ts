@@ -11,6 +11,23 @@ const JUZ = [
   { j: 28, n: 'قد سمع', s: 542 }, { j: 29, n: 'تبارك', s: 562 }, { j: 30, n: 'عمّ', s: 582 },
 ];
 
+/** Get juz number (1–30) for a Mus'haf page (1–604). */
+export function getJuzByPage(page: number): number {
+  if (page < 1 || page > 604) return 1;
+  let j = 1;
+  for (let i = 0; i < JUZ.length; i++) {
+    if (page >= JUZ[i].s) j = JUZ[i].j;
+  }
+  return j;
+}
+
+/** Start page of a juz (1–30). Juz 1 starts at 1, juz 2 at 22, etc. */
+export function getJuzStartPage(juzNum: number): number {
+  if (juzNum < 1 || juzNum > 30) return 1;
+  const j = JUZ.find((x) => x.j === juzNum);
+  return j ? j.s : 1;
+}
+
 export function getJuzInfo(tp: number): {
   khatmas: number;
   currentPages: number;

@@ -1,7 +1,9 @@
+import { useEffect, useRef } from "react";
 import { IonContent, IonPage } from "@ionic/react";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import { useTheme, useIsDark } from "../context/ThemeContext";
 import { fontSans } from "../lib/theme";
+import { Card } from "../components/Card";
 
 const MENU_ITEMS = [
   {
@@ -45,6 +47,15 @@ export function More() {
   const t = useTheme();
   const isDark = useIsDark();
   const history = useHistory();
+  const location = useLocation();
+  const qiyamRef = useRef<HTMLDivElement>(null);
+  const sadaqaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const hash = location.hash.slice(1);
+    const el = hash === "qiyam" ? qiyamRef.current : hash === "sadaqa" ? sadaqaRef.current : null;
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  }, [location.hash]);
 
   return (
     <IonPage>
@@ -154,6 +165,28 @@ export function More() {
                 </div>
               );
             })}
+          </div>
+
+          {/* قيام الليل — للوصول من تحديات اليوم */}
+          <div ref={qiyamRef} id="qiyam" style={{ scrollMarginTop: 16 }}>
+            <Card style={{ marginTop: 16 }}>
+              <span style={{ fontSize: 28 }}>🌙</span>
+              <h3 style={{ fontSize: 16, margin: "8px 0 4px", color: t.text }}>قيام الليل</h3>
+              <p style={{ fontSize: 12, color: t.muted, margin: 0, lineHeight: 1.6 }}>
+                صلِّ ما تيسّر من الليل ولو ركعتين. يمكنك تسجيل "قيام الليل" من صفحة يومك ضمن تحديات اليوم.
+              </p>
+            </Card>
+          </div>
+
+          {/* صدقة — للوصول من تحديات اليوم */}
+          <div ref={sadaqaRef} id="sadaqa" style={{ scrollMarginTop: 16 }}>
+            <Card style={{ marginTop: 16 }}>
+              <span style={{ fontSize: 28 }}>💰</span>
+              <h3 style={{ fontSize: 16, margin: "8px 0 4px", color: t.text }}>صدقة</h3>
+              <p style={{ fontSize: 12, color: t.muted, margin: 0, lineHeight: 1.6 }}>
+                التصدق ولو بالقليل من أعظم الأعمال في رمضان. يمكنك تسجيل "صدقة" من صفحة يومك ضمن تحديات اليوم.
+              </p>
+            </Card>
           </div>
 
           {/* Bottom spacer */}

@@ -60,8 +60,8 @@ export type AppState = {
   duas: DuaItem[];
   subha: SubhaCounts;
   setupDone: boolean;
-  /** Daily time for random dua notification, e.g. "20:00" or null if disabled */
-  duaNotificationTime: string | null;
+  /** Notification interval for random dua (in minutes), e.g. 5, 10, 15, 30, 60, 120, or null if disabled */
+  duaNotificationInterval: number | null;
   /** Whether motivational reminders (Egyptian Arabic) are enabled */
   remindersEnabled: boolean;
   /** Last calendar date the app was opened (YYYY-MM-DD); used to archive and roll over day */
@@ -135,8 +135,10 @@ export type AppState = {
   quranLastPage: number;
   /** Page numbers viewed today in Quran (for dynamic reading count) */
   todayQuranPagesViewed: number[];
-  /** Salah ala el naby notification times (array of HH:mm strings) */
-  salahAlaNabyTimes: string[];
+  /** Salah ala el naby notification interval (in minutes), or null if disabled */
+  salahAlaNabyInterval: number | null;
+  /** Whether to read notification text aloud with voice (text-to-speech) */
+  notificationVoiceEnabled: boolean;
 };
 
 export type Action =
@@ -155,7 +157,7 @@ export type Action =
   | { type: 'SUBHA_INC'; id: keyof SubhaCounts }
   | { type: 'SUBHA_RESET'; id: keyof SubhaCounts }
   | { type: 'SUBHA_RESET_ALL' }
-  | { type: 'SET_DUA_NOTIFICATION_TIME'; time: string | null }
+  | { type: 'SET_DUA_NOTIFICATION_INTERVAL'; interval: number | null }
   | { type: 'SET_REMINDERS_ENABLED'; enabled: boolean }
   | { type: 'ARCHIVE_AND_ROLLOVER'; archivedDate: string; snapshot: DailySnapshot; newDate: string }
   | { type: 'SET_LAST_SEEN_DATE'; date: string }
@@ -194,9 +196,8 @@ export type Action =
   | { type: 'SET_QURAN_POSITION'; surah: number; ayah: number }
   | { type: 'SET_QURAN_PAGE'; page: number }
   | { type: 'ADD_QURAN_PAGE_VIEWED'; page: number }
-  | { type: 'SET_SALAH_ALA_NABY_TIMES'; times: string[] }
-  | { type: 'ADD_SALAH_ALA_NABY_TIME'; time: string }
-  | { type: 'REMOVE_SALAH_ALA_NABY_TIME'; index: number };
+  | { type: 'SET_SALAH_ALA_NABY_INTERVAL'; interval: number | null }
+  | { type: 'SET_NOTIFICATION_VOICE'; enabled: boolean };
 
 const STORAGE_KEY = 'yomy-ramadan-state';
 
@@ -245,7 +246,7 @@ export function defaultState(): AppState {
       basmala: 0,
     },
     setupDone: false,
-    duaNotificationTime: null,
+    duaNotificationInterval: null,
     remindersEnabled: true,
     lastSeenDate: '',
     dailyHistory: {},
@@ -283,7 +284,8 @@ export function defaultState(): AppState {
     quranLastAyah: 0,
     quranLastPage: 1,
     todayQuranPagesViewed: [],
-    salahAlaNabyTimes: [],
+    salahAlaNabyInterval: null,
+    notificationVoiceEnabled: false, // Default to disabled (silent notifications)
   };
 }
 
@@ -376,10 +378,10 @@ function loadState(): AppState | null {
         ? { ...def.subha, ...parsed.subha } as SubhaCounts
         : def.subha,
       setupDone: typeof parsed.setupDone === 'boolean' ? parsed.setupDone : def.setupDone,
-      duaNotificationTime:
-        parsed.duaNotificationTime === null || (typeof parsed.duaNotificationTime === 'string' && /^\d{1,2}:\d{2}$/.test(parsed.duaNotificationTime))
-          ? (parsed.duaNotificationTime as string | null)
-          : def.duaNotificationTime,
+      duaNotificationInterval:
+        parsed.duaNotificationInterval === null || (typeof parsed.duaNotificationInterval === 'number' && [5, 10, 15, 30, 60, 120].includes(parsed.duaNotificationInterval))
+          ? (parsed.duaNotificationInterval as number | null)
+          : def.duaNotificationInterval,
       remindersEnabled: typeof parsed.remindersEnabled === 'boolean' ? parsed.remindersEnabled : def.remindersEnabled,
       lastSeenDate: typeof parsed.lastSeenDate === 'string' ? parsed.lastSeenDate : def.lastSeenDate,
       dailyHistory: (() => {
@@ -499,9 +501,11 @@ function loadState(): AppState | null {
       todayQuranPagesViewed: Array.isArray(parsed.todayQuranPagesViewed)
         ? parsed.todayQuranPagesViewed.filter((p: unknown) => typeof p === 'number' && p >= 1 && p <= 604)
         : def.todayQuranPagesViewed,
-      salahAlaNabyTimes: Array.isArray(parsed.salahAlaNabyTimes)
-        ? parsed.salahAlaNabyTimes.filter((t: unknown) => typeof t === 'string' && /^\d{1,2}:\d{2}$/.test(t))
-        : def.salahAlaNabyTimes,
+      salahAlaNabyInterval:
+        parsed.salahAlaNabyInterval === null || (typeof parsed.salahAlaNabyInterval === 'number' && [5, 10, 15, 30, 60, 120].includes(parsed.salahAlaNabyInterval))
+          ? (parsed.salahAlaNabyInterval as number | null)
+          : def.salahAlaNabyInterval,
+      notificationVoiceEnabled: typeof parsed.notificationVoiceEnabled === 'boolean' ? parsed.notificationVoiceEnabled : def.notificationVoiceEnabled,
     };
   } catch {
     return null;
@@ -643,8 +647,8 @@ export function reducer(s: AppState, a: Action): AppState {
         ...s,
         subha: Object.fromEntries(Object.keys(s.subha).map((k) => [k, 0])) as SubhaCounts,
       };
-    case 'SET_DUA_NOTIFICATION_TIME':
-      return { ...s, duaNotificationTime: a.time };
+    case 'SET_DUA_NOTIFICATION_INTERVAL':
+      return { ...s, duaNotificationInterval: a.interval };
     case 'SET_REMINDERS_ENABLED':
       return { ...s, remindersEnabled: a.enabled };
     case 'ARCHIVE_AND_ROLLOVER': {
@@ -791,14 +795,10 @@ export function reducer(s: AppState, a: Action): AppState {
       if (viewed.includes(page)) return s;
       return { ...s, todayQuranPagesViewed: [...viewed, page] };
     }
-    case 'SET_SALAH_ALA_NABY_TIMES':
-      return { ...s, salahAlaNabyTimes: a.times };
-    case 'ADD_SALAH_ALA_NABY_TIME': {
-      if (s.salahAlaNabyTimes.includes(a.time)) return s;
-      return { ...s, salahAlaNabyTimes: [...s.salahAlaNabyTimes, a.time] };
-    }
-    case 'REMOVE_SALAH_ALA_NABY_TIME':
-      return { ...s, salahAlaNabyTimes: s.salahAlaNabyTimes.filter((_, i) => i !== a.index) };
+    case 'SET_SALAH_ALA_NABY_INTERVAL':
+      return { ...s, salahAlaNabyInterval: a.interval };
+    case 'SET_NOTIFICATION_VOICE':
+      return { ...s, notificationVoiceEnabled: a.enabled };
     default:
       return s;
   }

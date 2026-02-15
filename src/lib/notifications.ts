@@ -61,6 +61,16 @@ const CHANNEL_CHALLENGE_START = 3000;
 const CHANNEL_LAST_TEN = 4000;
 const CHANNEL_SALAH_ALA_NABY_START = 5000;
 
+// Notification interval options (in minutes)
+export const NOTIFICATION_INTERVALS = [
+  { value: 5, label: '5 دقائق' },
+  { value: 10, label: '10 دقائق' },
+  { value: 15, label: '15 دقيقة' },
+  { value: 30, label: '30 دقيقة' },
+  { value: 60, label: 'ساعة' },
+  { value: 120, label: 'ساعتين' },
+] as const;
+
 /** Request permission for notifications. Returns true if granted. */
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
@@ -107,6 +117,12 @@ function getNextOccurrence(hour: number, minute: number): Date {
   return next;
 }
 
+/** Get date after specified minutes from now */
+function getDateAfterMinutes(minutes: number): Date {
+  const now = new Date();
+  return new Date(now.getTime() + minutes * 60 * 1000);
+}
+
 /** Show a web notification (fallback for web platform) */
 function showWebNotification(title: string, body: string): void {
   if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;
@@ -119,18 +135,19 @@ function showWebNotification(title: string, body: string): void {
 
 /**
  * Schedule all notifications:
- * - If duaNotificationTime is set and duas exist: one random dua at that time (daily).
+ * - If duaNotificationInterval is set and duas exist: recurring dua notification at the specified interval.
  * - If remindersEnabled: Egyptian Arabic reminders at 9:00, 14:00, 20:00 + challenge reminders.
  * - If in last 10 nights of Ramadan: special notification at 10pm.
- * - Salah ala el naby notifications at user-defined times.
+ * - Salah ala el naby notifications at user-defined intervals.
  * Call after permission is granted and when state changes.
  */
 export async function scheduleNotifications(
   duas: { text: string; day: string }[],
-  duaNotificationTime: string | null,
+  duaNotificationInterval: number | null, // in minutes
   remindersEnabled: boolean,
   ramadanDay?: number,
-  salahAlaNabyTimes?: string[]
+  salahAlaNabyInterval?: number | null, // in minutes
+  soundEnabled?: boolean // whether to play sound with notifications
 ): Promise<void> {
   // Cancel all existing notifications first
   await cancelScheduledNotifications();
@@ -142,21 +159,30 @@ export async function scheduleNotifications(
     title: string;
     body: string;
     id: number;
-    schedule: { at: Date; repeats?: boolean; every?: 'day' };
+    schedule: { at: Date; repeats?: boolean; every?: 'day' | 'week' | 'month' | 'year' };
+    sound?: string;
+    silent?: boolean;
   }[] = [];
 
-  // 1. Daily dua notification
-  const duaTime = duaNotificationTime ? parseTime(duaNotificationTime) : null;
-  if (duaTime && duas.length > 0) {
-    const dua = pickRandom(duas);
-    if (dua) {
-      const nextAt = getNextOccurrence(duaTime.hour, duaTime.minute);
-      notifications.push({
-        id: CHANNEL_DUA,
-        title: '🤲 الدعاء قبل المغرب',
-        body: dua.text.length > 120 ? dua.text.slice(0, 117) + '...' : dua.text,
-        schedule: { at: nextAt, repeats: true, every: 'day' },
-      });
+  // 1. Recurring dua notification (schedule multiple throughout the day)
+  if (duaNotificationInterval && duas.length > 0) {
+    // Schedule notifications for the next 24 hours at the specified interval
+    const maxNotifications = Math.floor((24 * 60) / duaNotificationInterval);
+    const notificationsToSchedule = Math.min(maxNotifications, 20); // Cap at 20 to avoid too many
+    
+    for (let i = 0; i < notificationsToSchedule; i++) {
+      const dua = pickRandom(duas);
+      if (dua) {
+        const minutesOffset = duaNotificationInterval * (i + 1);
+        const nextAt = getDateAfterMinutes(minutesOffset);
+        notifications.push({
+          id: CHANNEL_DUA + i,
+          title: '🤲 تذكير الدعاء',
+          body: dua.text.length > 120 ? dua.text.slice(0, 117) + '...' : dua.text,
+          schedule: { at: nextAt },
+          ...(soundEnabled === false && { silent: true }),
+        });
+      }
     }
   }
 
@@ -172,6 +198,7 @@ export async function scheduleNotifications(
           title: 'يومي 🌙',
           body: msg,
           schedule: { at: nextAt, repeats: true, every: 'day' },
+          ...(soundEnabled === false && { silent: true }),
         });
       }
     });
@@ -187,6 +214,7 @@ export async function scheduleNotifications(
           title: 'تحدي رمضان 🌙',
           body: msg,
           schedule: { at: nextAt, repeats: true, every: 'day' },
+          ...(soundEnabled === false && { silent: true }),
         });
       }
     });
@@ -201,28 +229,32 @@ export async function scheduleNotifications(
           title: 'العشر الأواخر ✨',
           body: msg,
           schedule: { at: nextAt, repeats: true, every: 'day' },
+          ...(soundEnabled === false && { silent: true }),
         });
       }
     }
   }
 
-  // 5. Salah ala el naby notifications
-  if (salahAlaNabyTimes && salahAlaNabyTimes.length > 0) {
-    salahAlaNabyTimes.forEach((timeStr, index) => {
-      const time = parseTime(timeStr);
-      if (time) {
-        const msg = pickRandom(SALAH_ALA_NABY_MESSAGES);
-        if (msg) {
-          const nextAt = getNextOccurrence(time.hour, time.minute);
-          notifications.push({
-            id: CHANNEL_SALAH_ALA_NABY_START + index,
-            title: 'الصلاة على النبي 💚',
-            body: msg,
-            schedule: { at: nextAt, repeats: true, every: 'day' },
-          });
-        }
+  // 5. Salah ala el naby notifications (schedule multiple throughout the day)
+  if (salahAlaNabyInterval) {
+    // Schedule notifications for the next 24 hours at the specified interval
+    const maxNotifications = Math.floor((24 * 60) / salahAlaNabyInterval);
+    const notificationsToSchedule = Math.min(maxNotifications, 20); // Cap at 20
+    
+    for (let i = 0; i < notificationsToSchedule; i++) {
+      const msg = pickRandom(SALAH_ALA_NABY_MESSAGES);
+      if (msg) {
+        const minutesOffset = salahAlaNabyInterval * (i + 1);
+        const nextAt = getDateAfterMinutes(minutesOffset);
+        notifications.push({
+          id: CHANNEL_SALAH_ALA_NABY_START + i,
+          title: 'الصلاة على النبي 💚',
+          body: msg,
+          schedule: { at: nextAt },
+          ...(soundEnabled === false && { silent: true }),
+        });
       }
-    });
+    }
   }
 
   // Schedule all notifications
@@ -235,6 +267,7 @@ export async function scheduleNotifications(
             title: n.title,
             body: n.body,
             schedule: n.schedule,
+            ...(n.silent !== undefined && { silent: n.silent }),
           })),
         });
         console.log(`Scheduled ${notifications.length} notifications`);
@@ -251,23 +284,76 @@ export async function scheduleNotifications(
   }
 }
 
+/** Speak notification text using Text-to-Speech (Arabic voice) */
+export async function speakNotificationText(text: string): Promise<void> {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  
+  try {
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ar-SA'; // Arabic (Saudi Arabia)
+    utterance.rate = 0.9; // Slightly slower for clarity
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    // Try to use an Arabic voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const arabicVoice = voices.find(voice => voice.lang.startsWith('ar'));
+    if (arabicVoice) {
+      utterance.voice = arabicVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.error('Failed to speak text:', error);
+  }
+}
+
+/**
+ * Set up notification listeners to trigger text-to-speech when notifications are received/clicked.
+ * Call this once during app initialization.
+ */
+export function setupNotificationListeners(voiceEnabled: boolean): void {
+  if (!Capacitor.isNativePlatform()) return;
+  
+  // Listen for when notification is received (shown)
+  LocalNotifications.addListener('localNotificationReceived', (notification) => {
+    if (voiceEnabled && notification.body) {
+      speakNotificationText(notification.body);
+    }
+  });
+  
+  // Listen for when user taps on notification
+  LocalNotifications.addListener('localNotificationActionPerformed', (notificationAction) => {
+    if (voiceEnabled && notificationAction.notification.body) {
+      speakNotificationText(notificationAction.notification.body);
+    }
+  });
+}
+
 /** Cancel all scheduled notifications */
 export async function cancelScheduledNotifications(): Promise<void> {
   if (Capacitor.isNativePlatform()) {
     try {
-      await LocalNotifications.cancel({
-        notifications: [
-          { id: CHANNEL_DUA },
-          { id: CHANNEL_REMINDER_START },
-          { id: CHANNEL_REMINDER_START + 1 },
-          { id: CHANNEL_REMINDER_START + 2 },
-          { id: CHANNEL_CHALLENGE_START },
-          { id: CHANNEL_CHALLENGE_START + 1 },
-          { id: CHANNEL_LAST_TEN },
-          // Cancel up to 10 possible salah ala naby notifications
-          ...Array.from({ length: 10 }, (_, i) => ({ id: CHANNEL_SALAH_ALA_NABY_START + i })),
-        ],
-      });
+      const idsToCancel = [
+        // Dua notifications (up to 20)
+        ...Array.from({ length: 20 }, (_, i) => ({ id: CHANNEL_DUA + i })),
+        // Regular reminders
+        { id: CHANNEL_REMINDER_START },
+        { id: CHANNEL_REMINDER_START + 1 },
+        { id: CHANNEL_REMINDER_START + 2 },
+        // Challenge reminders
+        { id: CHANNEL_CHALLENGE_START },
+        { id: CHANNEL_CHALLENGE_START + 1 },
+        // Last 10 nights
+        { id: CHANNEL_LAST_TEN },
+        // Salah ala naby notifications (up to 20)
+        ...Array.from({ length: 20 }, (_, i) => ({ id: CHANNEL_SALAH_ALA_NABY_START + i })),
+      ];
+      
+      await LocalNotifications.cancel({ notifications: idsToCancel });
     } catch (error) {
       console.error('Failed to cancel notifications:', error);
     }

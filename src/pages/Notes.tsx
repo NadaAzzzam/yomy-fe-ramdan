@@ -6,7 +6,7 @@ import { Btn } from '../components/Btn';
 import { useTheme } from '../context/ThemeContext';
 import { getRamadanInfo } from '../lib/ramadan';
 import { fontSans } from '../lib/theme';
-import { requestNotificationPermission, parseTime } from '../lib/notifications';
+import { requestNotificationPermission, NOTIFICATION_INTERVALS } from '../lib/notifications';
 import { JOURNAL_PROMPTS, DUA_CATEGORIES } from '../lib/data';
 import type { AppState, Action, JournalEntry } from '../lib/state';
 
@@ -34,7 +34,6 @@ export function Notes({ state, dispatch }: NotesProps) {
   const [no, setNo] = useState('');
   const [du, setDu] = useState('');
   const [duaCat, setDuaCat] = useState('general');
-  const [duaTimeInput, setDuaTimeInput] = useState(state.duaNotificationTime ?? '');
   const [permRequesting, setPermRequesting] = useState(false);
   const [activeTab, setActiveTab] = useState<'duas' | 'podcasts' | 'journal'>('duas');
 
@@ -367,87 +366,116 @@ export function Notes({ state, dispatch }: NotesProps) {
               <Card style={{ marginTop: 12 }}>
                 <Sec icon="🔔" text="تذكير أدعية وإشعارات" />
                 <p style={{ fontSize: 11, color: t.muted, margin: '0 0 10px' }}>
-                  اختر وقت يوصلك فيه دعاء عشوائي من قائمتك كل يوم.
+                  اختر كل كم دقيقة يوصلك دعاء عشوائي من قائمتك.
                 </p>
+                
+                {/* Interval Options */}
                 <div
                   style={{
                     display: 'flex',
-                    gap: 8,
-                    alignItems: 'center',
                     flexWrap: 'wrap',
+                    gap: 6,
+                    marginBottom: 12,
                   }}
                 >
-                  <input
-                    type="time"
-                    value={duaTimeInput || state.duaNotificationTime || ''}
-                    onChange={(e) => setDuaTimeInput(e.target.value)}
-                    style={{
-                      background: t.inputBg,
-                      border: `1px solid ${t.muted}28`,
-                      borderRadius: 12,
-                      padding: '10px 12px',
-                      color: t.text,
-                      fontSize: 14,
-                      fontFamily: fontSans,
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      const raw = duaTimeInput.trim();
-                      const parsed = raw ? parseTime(raw) : null;
-                      if (parsed) {
-                        const h = String(parsed.hour).padStart(2, '0');
-                        const m = String(parsed.minute).padStart(2, '0');
-                        dispatch({ type: 'SET_DUA_NOTIFICATION_TIME', time: `${h}:${m}` });
-                      }
-                    }}
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: 12,
-                      border: 'none',
-                      background: t.green,
-                      color: '#fff',
-                      fontSize: 12,
-                      cursor: 'pointer',
-                      fontFamily: fontSans,
-                      fontWeight: 600,
-                    }}
-                  >
-                    تفعيل
-                  </button>
-                  {state.duaNotificationTime && (
+                  {NOTIFICATION_INTERVALS.map((interval) => (
                     <button
+                      key={interval.value}
                       onClick={() => {
-                        dispatch({ type: 'SET_DUA_NOTIFICATION_TIME', time: null });
-                        setDuaTimeInput('');
+                        dispatch({
+                          type: 'SET_DUA_NOTIFICATION_INTERVAL',
+                          interval: state.duaNotificationInterval === interval.value ? null : interval.value,
+                        });
                       }}
                       style={{
-                        padding: '10px 14px',
+                        padding: '10px 16px',
                         borderRadius: 12,
-                        border: `1px solid ${t.red}40`,
-                        background: 'transparent',
-                        color: t.red,
+                        border: `1.5px solid ${
+                          state.duaNotificationInterval === interval.value ? t.green : t.border + '30'
+                        }`,
+                        background:
+                          state.duaNotificationInterval === interval.value
+                            ? `${t.green}15`
+                            : 'transparent',
+                        color:
+                          state.duaNotificationInterval === interval.value
+                            ? t.green
+                            : t.text,
                         fontSize: 12,
-                        cursor: 'pointer',
                         fontFamily: fontSans,
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        transition: 'all .2s',
+                        flex: '1 1 auto',
+                        minWidth: 'calc(33.333% - 6px)',
                       }}
                     >
-                      إلغاء
+                      {interval.label}
                     </button>
-                  )}
+                  ))}
                 </div>
-                {state.duaNotificationTime && (
-                  <p style={{ fontSize: 12, color: t.green, margin: '8px 0 0' }}>
-                    ✓ تذكير مفعّل الساعة {state.duaNotificationTime}
+                
+                {state.duaNotificationInterval && (
+                  <p style={{ fontSize: 12, color: t.green, margin: '0 0 12px', textAlign: 'center' }}>
+                    ✓ تذكير مفعّل كل {NOTIFICATION_INTERVALS.find(i => i.value === state.duaNotificationInterval)?.label}
                   </p>
                 )}
 
+                {/* Notification Voice Reading Toggle */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     marginTop: 12,
+                    padding: '10px 12px',
+                    background: t.cardAlt,
+                    borderRadius: 12,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 16 }}>🗣️</span>
+                    <span style={{ fontSize: 12, color: t.text }}>قراءة النص بالصوت</span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      dispatch({
+                        type: 'SET_NOTIFICATION_VOICE',
+                        enabled: !state.notificationVoiceEnabled,
+                      })
+                    }
+                    style={{
+                      width: 44,
+                      height: 24,
+                      borderRadius: 12,
+                      border: 'none',
+                      background: state.notificationVoiceEnabled ? t.green : t.muted + '44',
+                      padding: 2,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        background: '#fff',
+                        transform: state.notificationVoiceEnabled ? 'translateX(0)' : 'translateX(20px)',
+                        transition: 'transform .2s',
+                      }}
+                    />
+                  </button>
+                </div>
+                <p style={{ fontSize: 10, color: t.muted, margin: '6px 0 0', textAlign: 'center' }}>
+                  عند التفعيل، سيتم قراءة نص الإشعار بالصوت تلقائياً
+                </p>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: 8,
                     padding: '10px 12px',
                     background: t.cardAlt,
                     borderRadius: 12,
@@ -518,96 +546,75 @@ export function Notes({ state, dispatch }: NotesProps) {
                     lineHeight: 1.6,
                   }}
                 >
-                  أضف أوقات محددة للتذكير بالصلاة على النبي ﷺ يوميًا
+                  اختر كل كم دقيقة تحب يوصلك تذكير بالصلاة على النبي ﷺ
                 </p>
 
-                {/* Add new time */}
+                {/* Interval Options */}
                 <div
                   style={{
                     display: 'flex',
-                    gap: 8,
-                    marginBottom: 12,
+                    flexWrap: 'wrap',
+                    gap: 6,
                   }}
                 >
-                  <input
-                    type="time"
-                    onChange={(e) => {
-                      const time = e.target.value;
-                      if (time && parseTime(time)) {
-                        dispatch({ type: 'ADD_SALAH_ALA_NABY_TIME', time });
-                        e.target.value = '';
-                      }
-                    }}
-                    style={{
-                      flex: 1,
-                      background: t.inputBg,
-                      border: `1px solid ${t.muted}28`,
-                      borderRadius: 12,
-                      padding: '10px 12px',
-                      color: t.text,
-                      fontSize: 14,
-                      fontFamily: fontSans,
-                    }}
-                  />
+                  {NOTIFICATION_INTERVALS.map((interval) => (
+                    <button
+                      key={interval.value}
+                      onClick={() => {
+                        dispatch({
+                          type: 'SET_SALAH_ALA_NABY_INTERVAL',
+                          interval: state.salahAlaNabyInterval === interval.value ? null : interval.value,
+                        });
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: 12,
+                        border: `1.5px solid ${
+                          state.salahAlaNabyInterval === interval.value ? t.green : t.border + '30'
+                        }`,
+                        background:
+                          state.salahAlaNabyInterval === interval.value
+                            ? `${t.green}15`
+                            : 'transparent',
+                        color:
+                          state.salahAlaNabyInterval === interval.value
+                            ? t.green
+                            : t.text,
+                        fontSize: 12,
+                        fontFamily: fontSans,
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        transition: 'all .2s',
+                        flex: '1 1 auto',
+                        minWidth: 'calc(33.333% - 6px)',
+                      }}
+                    >
+                      {interval.label}
+                    </button>
+                  ))}
                 </div>
 
-                {/* List of times */}
-                {state.salahAlaNabyTimes.length > 0 && (
-                  <div
+                {state.salahAlaNabyInterval ? (
+                  <p
                     style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
+                      fontSize: 12,
+                      color: t.green,
+                      textAlign: 'center',
+                      margin: '12px 0 0',
                     }}
                   >
-                    {state.salahAlaNabyTimes.map((time, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '10px 12px',
-                          background: t.cardAlt,
-                          borderRadius: 12,
-                          border: `1px solid ${t.border}15`,
-                        }}
-                      >
-                        <span style={{ fontSize: 13, color: t.text, fontWeight: 600 }}>
-                          🕐 {time}
-                        </span>
-                        <button
-                          onClick={() =>
-                            dispatch({ type: 'REMOVE_SALAH_ALA_NABY_TIME', index: idx })
-                          }
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: 10,
-                            border: `1px solid ${t.red}30`,
-                            background: 'transparent',
-                            color: t.red,
-                            fontSize: 11,
-                            cursor: 'pointer',
-                            fontFamily: fontSans,
-                          }}
-                        >
-                          حذف
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {state.salahAlaNabyTimes.length === 0 && (
+                    ✓ تذكير مفعّل كل {NOTIFICATION_INTERVALS.find(i => i.value === state.salahAlaNabyInterval)?.label}
+                  </p>
+                ) : (
                   <p
                     style={{
                       fontSize: 12,
                       color: t.muted,
                       textAlign: 'center',
-                      margin: '8px 0',
+                      margin: '12px 0 0',
                     }}
                   >
-                    لم تضف أي أوقات بعد
+                    اختر فترة التذكير من الأعلى
                   </p>
                 )}
               </Card>

@@ -9,7 +9,7 @@ import type { ThemeMode } from './context/ThemeContext';
 import { Star } from './components/Star';
 import { PageLoader } from './components/PageLoader';
 import { initState, reducer, saveState, buildDailySnapshot } from './lib/state';
-import { scheduleNotifications } from './lib/notifications';
+import { scheduleNotifications, setupNotificationListeners } from './lib/notifications';
 import { getRamadanInfo } from './lib/ramadan';
 import type { AppState } from './lib/state';
 import type { Action } from './lib/state';
@@ -204,12 +204,18 @@ function AppContent() {
     const ramInfo = getRamadanInfo();
     scheduleNotifications(
       state.duas,
-      state.duaNotificationTime,
+      state.duaNotificationInterval,
       state.remindersEnabled,
       ramInfo.day,
-      state.salahAlaNabyTimes
+      state.salahAlaNabyInterval,
+      !state.notificationVoiceEnabled // Pass silent=true when voice is disabled
     );
-  }, [state.duas, state.duaNotificationTime, state.remindersEnabled, state.salahAlaNabyTimes]);
+  }, [state.duas, state.duaNotificationInterval, state.remindersEnabled, state.salahAlaNabyInterval, state.notificationVoiceEnabled]);
+
+  // Set up notification listeners for text-to-speech
+  useEffect(() => {
+    setupNotificationListeners(state.notificationVoiceEnabled);
+  }, [state.notificationVoiceEnabled]);
 
   const isDark = useIsDark();
   const t = useTheme();

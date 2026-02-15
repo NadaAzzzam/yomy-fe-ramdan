@@ -97,12 +97,30 @@ If the audio file is not found, the app will automatically fall back to text-to-
 
 ---
 
+## Android: Voice when app is closed/background
+
+For the **custom voice to play when the app is closed or in the background**, the same file must be in Android’s raw resources:
+
+1. **Path**: `android/app/src/main/res/raw/salah_ala_naby.mp3`  
+   (name must be lowercase with underscores, no hyphens.)
+
+2. **Copy**:  
+   `public/audio/salah-ala-naby.mp3` → `android/app/src/main/res/raw/salah_ala_naby.mp3`
+
+3. **Rebuild**:  
+   `npm run build` then `npx cap sync android`.
+
+The app uses a dedicated notification channel for Salah ala Naby with this sound, so the system plays it even when the app is not running.
+
+---
+
 ## Technical Notes
 
 - The audio file is loaded from: `/audio/salah-ala-naby.mp3`
 - File path is relative to the `public` folder
 - Make sure the audio file has proper permissions
 - For mobile apps, the audio is bundled during the build process
+- Android: custom notification sound uses `res/raw/salah_ala_naby.mp3` (see above)
 
 ## Building the App
 

@@ -10,6 +10,9 @@ import { Capacitor } from '@capacitor/core';
 /** Default Android channel ID (must match channel we create). */
 const ANDROID_CHANNEL_ID = 'yomy_default';
 
+/** Android channel for Salah ala Naby — custom sound plays when app is closed/background. File: res/raw/salah_ala_naby.mp3 */
+const ANDROID_CHANNEL_SALAH_ALA_NABY = 'salah_ala_naby_channel';
+
 export const REMINDER_MESSAGES_AR: string[] = [
   'تعالى افتح التطبيق واكمل مهامك 🌙',
   'استمر، أنت قدها! كمل شوية وخلص',
@@ -78,8 +81,8 @@ export const NOTIFICATION_INTERVALS = [
   { value: 120, label: 'ساعتين' },
 ] as const;
 
-/** Create Android notification channel (required for Android 8+ so notifications show when app is background/closed). */
-async function ensureAndroidChannel(): Promise<void> {
+/** Create Android notification channels (required for Android 8+ so notifications show when app is background/closed). */
+async function ensureAndroidChannels(): Promise<void> {
   if (Capacitor.getPlatform() !== 'android') return;
   try {
     await LocalNotifications.createChannel({
@@ -88,6 +91,14 @@ async function ensureAndroidChannel(): Promise<void> {
       description: 'تذكيرات الدعاء والتسبيح ورمضان',
       importance: 4, // IMPORTANCE_HIGH
       sound: 'beep.wav',
+      visibility: 1,
+    });
+    await LocalNotifications.createChannel({
+      id: ANDROID_CHANNEL_SALAH_ALA_NABY,
+      name: 'الصلاة على النبي',
+      description: 'تذكير بالصلاة على النبي مع صوت',
+      importance: 4,
+      sound: 'salah_ala_naby', // res/raw/salah_ala_naby.mp3 (no extension)
       visibility: 1,
     });
   } catch (e) {
@@ -108,7 +119,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
   }
 
   try {
-    await ensureAndroidChannel();
+    await ensureAndroidChannels();
     const result = await LocalNotifications.requestPermissions();
     return result.display === 'granted';
   } catch (error) {
@@ -290,8 +301,10 @@ export async function scheduleNotifications(
   if (notifications.length > 0) {
     if (Capacitor.isNativePlatform()) {
       try {
-        await ensureAndroidChannel();
+        await ensureAndroidChannels();
         const isAndroid = Capacitor.getPlatform() === 'android';
+        const isSalahAlaNaby = (id: number) =>
+          id >= CHANNEL_SALAH_ALA_NABY_START && id < CHANNEL_SALAH_ALA_NABY_START + 20;
         await LocalNotifications.schedule({
           notifications: notifications.map(n => ({
             id: n.id,
@@ -303,7 +316,9 @@ export async function scheduleNotifications(
             },
             ...(n.silent !== undefined && { silent: n.silent }),
             ...(isAndroid && {
-              channelId: ANDROID_CHANNEL_ID,
+              channelId: isSalahAlaNaby(n.id) && soundEnabled
+                ? ANDROID_CHANNEL_SALAH_ALA_NABY
+                : ANDROID_CHANNEL_ID,
               smallIcon: 'ic_notification',
               largeIcon: 'ic_launcher_foreground',
               iconColor: '#D4A84B',

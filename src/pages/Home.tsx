@@ -11,11 +11,11 @@ import { Confetti } from "../components/Confetti";
 import { useTheme, useIsDark } from "../context/ThemeContext";
 import { getRamadanInfo, AR_DAYS } from "../lib/ramadan";
 import { getJuzInfo } from "../lib/juz";
+import adhkarData from "../lib/adhkar.json";
 import {
   HADITHS,
   DAILY_IBADAAT,
   DAILY_TIPS,
-  MORNING_ADHKAR,
   RAMADAN_DAY_HADITHS,
   HEART_FEELINGS,
   DAILY_LEARNING,
@@ -106,7 +106,33 @@ export function Home({ state, dispatch }: HomeProps) {
   const { hadith } = useHadithOfTheDay(dayIdx, HADITHS);
   const todayIbada = DAILY_IBADAAT[dayIdx % DAILY_IBADAAT.length]!;
   const todayTip = DAILY_TIPS[dayIdx % DAILY_TIPS.length]!;
-  const todayDhikr = MORNING_ADHKAR[dayIdx % MORNING_ADHKAR.length]!;
+
+  // Dhikr of the day: morning vs evening by time, random zikr each time app opens; click to show another
+  const [todayDhikrState, setTodayDhikrState] = useState(() => {
+    const hour = new Date().getHours();
+    const isEvening = hour >= 12; // مساءً من الظهر، صباحاً قبل الظهر
+    const list = isEvening
+      ? (adhkarData.evening as { arabic: string }[])
+      : (adhkarData.morning as { arabic: string }[]);
+    const item = list[Math.floor(Math.random() * list.length)];
+    return {
+      text: item?.arabic ?? "",
+      isEvening,
+    };
+  });
+  const todayDhikr = todayDhikrState.text;
+  const isEveningDhikr = todayDhikrState.isEvening;
+
+  const showNextDhikr = () => {
+    const list = isEveningDhikr
+      ? (adhkarData.evening as { arabic: string }[])
+      : (adhkarData.morning as { arabic: string }[]);
+    if (list.length === 0) return;
+    const others = list.filter((x) => x.arabic !== todayDhikr);
+    const pool = others.length > 0 ? others : list;
+    const item = pool[Math.floor(Math.random() * pool.length)];
+    if (item) setTodayDhikrState((s) => ({ ...s, text: item.arabic }));
+  };
 
   const dayHadith = RAMADAN_DAY_HADITHS[dayIdx % RAMADAN_DAY_HADITHS.length]!;
   const todayLearning = DAILY_LEARNING[dayIdx % DAILY_LEARNING.length]!;
@@ -636,12 +662,13 @@ export function Home({ state, dispatch }: HomeProps) {
             </div>
           </div>
 
-          {/* ─── Morning Dhikr ─── */}
+          {/* ─── Dhikr of the day (morning/evening by time, random on open; tap for another) ─── */}
           <Card
             style={{
               marginBottom: 12,
               background: isDark ? `${t.gold}08` : `${t.gold}0A`,
             }}
+            onClick={showNextDhikr}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div
@@ -661,7 +688,7 @@ export function Home({ state, dispatch }: HomeProps) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: 10, color: t.gold, fontWeight: 700 }}>
-                  ذِكر اليوم
+                  ذِكر اليوم {isEveningDhikr ? "مساءً" : "صباحاً"}
                 </span>
                 <p
                   style={{
@@ -674,6 +701,9 @@ export function Home({ state, dispatch }: HomeProps) {
                 >
                   {todayDhikr}
                 </p>
+                <span style={{ fontSize: 10, color: t.gold, opacity: 0.8 }}>
+                  اضغط لذكر آخر
+                </span>
               </div>
             </div>
           </Card>

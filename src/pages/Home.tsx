@@ -25,6 +25,7 @@ import {
   DAILY_QURAN_REFLECTIONS,
   QURAN_MILESTONES,
 } from "../lib/data";
+import type { QuranReflection } from "../lib/data";
 import { useDailyTafsir, getTadabburDayIndex } from "../lib/tafsir";
 import { useHadithOfTheDay, formatHadithText } from "../lib/api";
 import { verifyHadithWithDorar, isKnownSahihSource } from "../lib/dorar";
@@ -41,8 +42,18 @@ const CHALLENGES: Array<{
   /** Tafsir: show تدبر in-app modal instead of opening a link */
   openTadabbor?: boolean;
 }> = [
-  { key: "azkarMorning", icon: "☀️", label: "أذكار الصباح", link: "/adhkar?tab=morning" },
-  { key: "azkarEvening", icon: "🌅", label: "أذكار المساء", link: "/adhkar?tab=evening" },
+  {
+    key: "azkarMorning",
+    icon: "☀️",
+    label: "أذكار الصباح",
+    link: "/adhkar?tab=morning",
+  },
+  {
+    key: "azkarEvening",
+    icon: "🌅",
+    label: "أذكار المساء",
+    link: "/adhkar?tab=evening",
+  },
   { key: "qiyam", icon: "🌙", label: "قيام الليل", link: "/more#qiyam" },
   { key: "sadaqa", icon: "💰", label: "صدقة", link: "/more#sadaqa" },
   { key: "podcast", icon: "🎙️", label: "بودكاست", link: "/notes?tab=podcasts" },
@@ -99,7 +110,10 @@ export function Home({ state, dispatch }: HomeProps) {
     tp * 3 +
     Object.values(state.subha).reduce((a, b) => a + b, 0) +
     state.quranMilestoneXP;
-  const currentQuranPage = Math.min(604, Math.max(1, state.totalPagesEver + tp));
+  const currentQuranPage = Math.min(
+    604,
+    Math.max(1, state.totalPagesEver + tp),
+  );
   const juz = getJuzInfo(state.totalPagesEver + tp);
   const currentSurahName = getSurahNameForPage(currentQuranPage);
   const dayIdx = Math.max(0, (info.day ?? new Date().getDate()) - 1);
@@ -135,7 +149,9 @@ export function Home({ state, dispatch }: HomeProps) {
   };
 
   const dayHadith = RAMADAN_DAY_HADITHS[dayIdx % RAMADAN_DAY_HADITHS.length]!;
-  const [dayHadithDorarVerified, setDayHadithDorarVerified] = useState<boolean | null>(null);
+  const [dayHadithDorarVerified, setDayHadithDorarVerified] = useState<
+    boolean | null
+  >(null);
   useEffect(() => {
     if (isKnownSahihSource(dayHadith.source)) {
       setDayHadithDorarVerified(true);
@@ -145,14 +161,22 @@ export function Home({ state, dispatch }: HomeProps) {
     verifyHadithWithDorar(dayHadith.text).then((r) => {
       if (!cancelled) setDayHadithDorarVerified(r.verified);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [dayHadith.text, dayHadith.source]);
   const todayLearning = DAILY_LEARNING[dayIdx % DAILY_LEARNING.length]!;
   const selectedHeart = HEART_FEELINGS.find((h) => h.id === state.heartFeeling);
   const noPressureMsg =
     NO_PRESSURE_MESSAGES[dayIdx % NO_PRESSURE_MESSAGES.length]!;
-  const tadabburDayIdx = getTadabburDayIndex(info.day, DAILY_QURAN_REFLECTIONS.length);
-  const { data: dailyTafsir } = useDailyTafsir(tadabburDayIdx, DAILY_QURAN_REFLECTIONS);
+  const tadabburDayIdx = getTadabburDayIndex(
+    info.day,
+    DAILY_QURAN_REFLECTIONS.length,
+  );
+  const { data: dailyTafsir } = useDailyTafsir(
+    tadabburDayIdx,
+    DAILY_QURAN_REFLECTIONS,
+  );
 
   // Check for Quran milestones
   const lastMilestone = QURAN_MILESTONES.filter(
@@ -164,6 +188,34 @@ export function Home({ state, dispatch }: HomeProps) {
 
   const [conf, setConf] = useState(false);
   const [tafsirModalOpen, setTafsirModalOpen] = useState(false);
+  const [tadabburOverride, setTadabburOverride] =
+    useState<QuranReflection | null>(null);
+  useEffect(() => {
+    setTadabburOverride(null);
+  }, [tadabburDayIdx]);
+  const displayedTafsir =
+    tadabburOverride != null
+      ? {
+          surah: tadabburOverride.surah,
+          surahNumber: tadabburOverride.surahNumber,
+          ayah: tadabburOverride.ayah,
+          arabic: tadabburOverride.arabic,
+          tafsirText: tadabburOverride.reflection,
+          tags: tadabburOverride.tags,
+          source: "local" as const,
+        }
+      : dailyTafsir;
+  const onTadabburTagClick = (tag: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const withTag = DAILY_QURAN_REFLECTIONS.filter((r) => r.tags.includes(tag));
+    if (withTag.length === 0) return;
+    const currentKey = `${displayedTafsir.surahNumber}_${displayedTafsir.ayah}`;
+    const idx = withTag.findIndex(
+      (r) => `${r.surahNumber}_${r.ayah}` === currentKey,
+    );
+    const next = withTag[(idx + 1) % withTag.length]!;
+    setTadabburOverride(next);
+  };
   const perf = dpct >= 100 && cpct >= 100;
   useEffect(() => {
     if (perf && !conf) setConf(true);
@@ -295,7 +347,12 @@ export function Home({ state, dispatch }: HomeProps) {
               <p style={{ fontSize: 9, color: t.muted, margin: 0 }}>
                 — {dayHadith.source}
                 {dayHadithDorarVerified === true && (
-                  <span style={{ marginRight: 4, color: t.green, fontWeight: 600 }}> • صحيح حسب الدرر</span>
+                  <span
+                    style={{ marginRight: 4, color: t.green, fontWeight: 600 }}
+                  >
+                    {" "}
+                    • صحيح حسب الدرر
+                  </span>
                 )}
               </p>
             </div>
@@ -546,7 +603,14 @@ export function Home({ state, dispatch }: HomeProps) {
                   / {state.dailyPages} صفحة
                 </span>
               </Ring>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  alignItems: "center",
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => history.push("/setup")}
@@ -799,9 +863,12 @@ export function Home({ state, dispatch }: HomeProps) {
                     margin: "2px 0 0",
                   }}
                 >
-                  {dailyTafsir.surah} : {dailyTafsir.ayah}
-                  {dailyTafsir.source === "dorar" && (
-                    <span style={{ marginRight: 6, color: t.gold }}> — من الدرر السنية</span>
+                  {displayedTafsir.surah} : {displayedTafsir.ayah}
+                  {displayedTafsir.source === "dorar" && (
+                    <span style={{ marginRight: 6, color: t.gold }}>
+                      {" "}
+                      — من الدرر السنية
+                    </span>
                   )}
                 </p>
               </div>
@@ -819,7 +886,7 @@ export function Home({ state, dispatch }: HomeProps) {
                 borderRadius: 10,
               }}
             >
-              "{stripNonQuranicSuffixes(dailyTafsir.arabic)}"
+              "{stripNonQuranicSuffixes(displayedTafsir.arabic)}"
             </p>
             <p
               style={{
@@ -829,7 +896,7 @@ export function Home({ state, dispatch }: HomeProps) {
                 margin: "0 0 8px",
               }}
             >
-              {dailyTafsir.tafsirText}
+              {displayedTafsir.tafsirText}
             </p>
             <div
               style={{
@@ -838,19 +905,25 @@ export function Home({ state, dispatch }: HomeProps) {
                 flexWrap: "wrap",
               }}
             >
-              {dailyTafsir.tags.map((tag) => (
-                <span
+              {displayedTafsir.tags.map((tag) => (
+                <button
                   key={tag}
+                  type="button"
+                  onClick={(e) => onTadabburTagClick(tag, e)}
                   style={{
                     fontSize: 9,
                     color: t.accent,
                     background: `${t.accent}10`,
                     padding: "2px 8px",
                     borderRadius: 8,
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: fontSans,
+                    fontWeight: 600,
                   }}
                 >
                   {tag}
-                </span>
+                </button>
               ))}
             </div>
           </Card>
@@ -879,7 +952,10 @@ export function Home({ state, dispatch }: HomeProps) {
               <button
                 type="button"
                 onClick={() => {
-                  const page = Math.min(604, Math.max(1, state.totalPagesEver + tp));
+                  const page = Math.min(
+                    604,
+                    Math.max(1, state.totalPagesEver + tp),
+                  );
                   history.push(`/quran?page=${page}`);
                 }}
                 style={{
@@ -958,14 +1034,20 @@ export function Home({ state, dispatch }: HomeProps) {
             <div
               key={`juz-progress-${state.totalPagesEver}-${tp}`}
               onClick={() => {
-                const page = Math.min(604, Math.max(1, state.totalPagesEver + tp));
+                const page = Math.min(
+                  604,
+                  Math.max(1, state.totalPagesEver + tp),
+                );
                 history.push(`/quran?page=${page}`);
               }}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  const page = Math.min(604, Math.max(1, state.totalPagesEver + tp));
+                  const page = Math.min(
+                    604,
+                    Math.max(1, state.totalPagesEver + tp),
+                  );
                   history.push(`/quran?page=${page}`);
                 }
               }}
@@ -978,7 +1060,9 @@ export function Home({ state, dispatch }: HomeProps) {
                 transition: "all .25s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = isDark ? `${t.gold}08` : `${t.gold}0A`;
+                e.currentTarget.style.background = isDark
+                  ? `${t.gold}08`
+                  : `${t.gold}0A`;
                 e.currentTarget.style.transform = "translateY(-2px)";
                 e.currentTarget.style.boxShadow = `0 4px 12px ${t.gold}15`;
               }}
@@ -997,13 +1081,15 @@ export function Home({ state, dispatch }: HomeProps) {
                   gap: 6,
                 }}
               >
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 2 }}
+                >
                   <span
-                    style={{ 
-                      fontSize: 12, 
-                      fontWeight: 700, 
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
                       color: t.goldLight,
-                      transition: "all .3s ease"
+                      transition: "all .3s ease",
                     }}
                   >
                     الجزء {juz.currentJuz} — سورة {currentSurahName}
@@ -1253,11 +1339,30 @@ export function Home({ state, dispatch }: HomeProps) {
                     overflow: "auto",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: t.gold }}>
-                      آية اليوم للتدبر — {dailyTafsir.surah} : {dailyTafsir.ayah}
-                      {dailyTafsir.source === "dorar" && (
-                        <span style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}> (من الدرر السنية)</span>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 10,
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: 14, fontWeight: 700, color: t.gold }}
+                    >
+                      آية اليوم للتدبر — {displayedTafsir.surah} :{" "}
+                      {displayedTafsir.ayah}
+                      {displayedTafsir.source === "dorar" && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: t.muted,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {" "}
+                          (من الدرر السنية)
+                        </span>
                       )}
                     </span>
                     <button
@@ -1288,25 +1393,48 @@ export function Home({ state, dispatch }: HomeProps) {
                       textAlign: "center",
                     }}
                   >
-                    "{stripNonQuranicSuffixes(dailyTafsir.arabic)}"
+                    "{stripNonQuranicSuffixes(displayedTafsir.arabic)}"
                   </p>
-                  <p style={{ fontSize: 14, color: t.textSec, lineHeight: 1.8, margin: 0 }}>
-                    {dailyTafsir.tafsirText}
+                  <p
+                    style={{
+                      fontSize: 14,
+                      color: t.textSec,
+                      lineHeight: 1.8,
+                      margin: 0,
+                    }}
+                  >
+                    {displayedTafsir.tafsirText}
                   </p>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 10 }}>
-                    {dailyTafsir.tags.map((tag) => (
-                      <span
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 4,
+                      flexWrap: "wrap",
+                      marginTop: 10,
+                    }}
+                  >
+                    {displayedTafsir.tags.map((tag) => (
+                      <button
                         key={tag}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTadabburTagClick(tag, e);
+                        }}
                         style={{
                           fontSize: 10,
                           color: t.accent,
                           background: `${t.accent}12`,
                           padding: "2px 8px",
                           borderRadius: 8,
+                          border: "none",
+                          cursor: "pointer",
+                          fontFamily: fontSans,
+                          fontWeight: 600,
                         }}
                       >
                         {tag}
-                      </span>
+                      </button>
                     ))}
                   </div>
                 </Card>
@@ -1316,7 +1444,15 @@ export function Home({ state, dispatch }: HomeProps) {
 
           {/* ─── Hadith ─── */}
           <Card style={{ marginTop: 12, background: t.gc }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 10,
+                marginBottom: 4,
+              }}
+            >
               <span style={{ fontSize: 11, color: t.gold, fontWeight: 600 }}>
                 💎 حديث اليوم
               </span>
@@ -1345,7 +1481,12 @@ export function Home({ state, dispatch }: HomeProps) {
               <p style={{ fontSize: 10, color: t.muted, margin: 0 }}>
                 — {hadith.source}
                 {dorarVerified === true && (
-                  <span style={{ marginRight: 6, color: t.green, fontWeight: 600 }}> • صحيح حسب الدرر</span>
+                  <span
+                    style={{ marginRight: 6, color: t.green, fontWeight: 600 }}
+                  >
+                    {" "}
+                    • صحيح حسب الدرر
+                  </span>
                 )}
               </p>
             </div>
@@ -1382,14 +1523,30 @@ export function Home({ state, dispatch }: HomeProps) {
               💡
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 2 }}>
-                <span style={{ fontSize: 10, color: t.accent, fontWeight: 700 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  marginBottom: 2,
+                }}
+              >
+                <span
+                  style={{ fontSize: 10, color: t.accent, fontWeight: 700 }}
+                >
                   نصيحة اليوم
                 </span>
                 <ShareButton
                   compact
                   content={{ title: "نصيحة اليوم", text: todayTip }}
-                  style={{ padding: "6px 8px", borderRadius: 10, borderColor: `${t.accent}40`, background: `${t.accent}12`, color: t.accent }}
+                  style={{
+                    padding: "6px 8px",
+                    borderRadius: 10,
+                    borderColor: `${t.accent}40`,
+                    background: `${t.accent}12`,
+                    color: t.accent,
+                  }}
                 />
               </div>
               <p
@@ -1407,7 +1564,15 @@ export function Home({ state, dispatch }: HomeProps) {
 
           {/* ─── Daily Learning (Moaazah-like) ─── */}
           <Card style={{ marginTop: 12 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 8,
+                marginBottom: 4,
+              }}
+            >
               <Sec icon={todayLearning.icon} text={todayLearning.category} />
               <ShareButton
                 compact

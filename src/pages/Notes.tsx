@@ -36,6 +36,7 @@ export function Notes({ state, dispatch }: NotesProps) {
   const [du, setDu] = useState('');
   const [duaCat, setDuaCat] = useState('general');
   const [permRequesting, setPermRequesting] = useState(false);
+  // Voice test feature commented for now: const [audioStatus, setAudioStatus] = useState<'idle' | 'checking' | 'found' | 'not-found' | 'playing'>('idle');
   const location = useLocation();
   const history = useHistory();
   const tabFromUrl = (() => {
@@ -73,6 +74,24 @@ export function Notes({ state, dispatch }: NotesProps) {
 
   const answeredDuas = state.duas.filter((d) => d.answered);
   const activeDuas = state.duas.filter((d) => !d.answered);
+
+  // Test if salah ala naby audio file exists - commented for now
+  /*
+  const testSalahAudio = async () => {
+    setAudioStatus('checking');
+    const audioPath = '/audio/salah-ala-naby.mp3';
+    const audio = new Audio();
+    audio.oncanplaythrough = () => {
+      setAudioStatus('found');
+      audio.play().then(() => {
+        setAudioStatus('playing');
+        audio.onended = () => setAudioStatus('found');
+      }).catch(() => setAudioStatus('not-found'));
+    };
+    audio.onerror = () => setAudioStatus('not-found');
+    audio.src = audioPath;
+  };
+  */
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     flex: 1,
@@ -438,61 +457,12 @@ export function Notes({ state, dispatch }: NotesProps) {
                   </p>
                 )}
 
-                {/* Notification Voice Reading Toggle */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     marginTop: 12,
-                    padding: '10px 12px',
-                    background: t.cardAlt,
-                    borderRadius: 12,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 16 }}>🗣️</span>
-                    <span style={{ fontSize: 12, color: t.text }}>قراءة النص بالصوت</span>
-                  </div>
-                  <button
-                    onClick={() =>
-                      dispatch({
-                        type: 'SET_NOTIFICATION_VOICE',
-                        enabled: !state.notificationVoiceEnabled,
-                      })
-                    }
-                    style={{
-                      width: 44,
-                      height: 24,
-                      borderRadius: 12,
-                      border: 'none',
-                      background: state.notificationVoiceEnabled ? t.green : t.muted + '44',
-                      padding: 2,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        background: '#fff',
-                        transform: state.notificationVoiceEnabled ? 'translateX(0)' : 'translateX(20px)',
-                        transition: 'transform .2s',
-                      }}
-                    />
-                  </button>
-                </div>
-                <p style={{ fontSize: 10, color: t.muted, margin: '6px 0 0', textAlign: 'center' }}>
-                  عند التفعيل، سيتم قراءة نص الإشعار بالصوت تلقائياً
-                </p>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: 8,
                     padding: '10px 12px',
                     background: t.cardAlt,
                     borderRadius: 12,
@@ -634,6 +604,114 @@ export function Notes({ state, dispatch }: NotesProps) {
                     اختر فترة التذكير من الأعلى
                   </p>
                 )}
+
+                {/* Voice Reading Toggle - commented for now
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: 12,
+                    padding: '10px 12px',
+                    background: t.cardAlt,
+                    borderRadius: 12,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 16 }}>🗣️</span>
+                    <span style={{ fontSize: 12, color: t.text }}>قراءة النص بالصوت</span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      dispatch({
+                        type: 'SET_NOTIFICATION_VOICE',
+                        enabled: !state.notificationVoiceEnabled,
+                      })
+                    }
+                    style={{
+                      width: 44,
+                      height: 24,
+                      borderRadius: 12,
+                      border: 'none',
+                      background: state.notificationVoiceEnabled ? t.green : t.muted + '44',
+                      padding: 2,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        background: '#fff',
+                        transform: state.notificationVoiceEnabled ? 'translateX(0)' : 'translateX(20px)',
+                        transition: 'transform .2s',
+                      }}
+                    />
+                  </button>
+                </div>
+                <p style={{ fontSize: 10, color: t.muted, margin: '6px 0 6px', textAlign: 'center' }}>
+                  عند التفعيل، سيتم تشغيل الصوت المحفوظ محلياً: "اللهم صلي على سيدنا محمد"
+                </p>
+                <p style={{ fontSize: 10, color: t.goldLight, margin: '0 0 12px', textAlign: 'center', opacity: 0.95 }}>
+                  💡 صوت طبيعي مثل الشافعي: حمّل تسجيل مقرئ من يوتيوب (مثلاً: «الصلاة الإبراهيمية مشاري العفاسي») ثم حوّله إلى MP3 وضعه في public/audio — انظر التعليمات في المجلد.
+                </p>
+                */}
+
+                {/* Test Salah Ala Naby Voice Button - commented for now
+                <p style={{ fontSize: 11, color: t.muted, margin: '0 0 6px', textAlign: 'center' }}>
+                  اضغط لاختبار صوت «اللهم صل على سيدنا محمد»
+                </p>
+                <button
+                  onClick={testSalahAudio}
+                  disabled={audioStatus === 'checking' || audioStatus === 'playing'}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: 12,
+                    border: `1px solid ${
+                      audioStatus === 'found' ? t.green + '50' :
+                      audioStatus === 'not-found' ? t.red + '50' :
+                      audioStatus === 'idle' ? t.gold + '50' : t.gold + '50'
+                    }`,
+                    background:
+                      audioStatus === 'found' ? t.bb(t.green) :
+                      audioStatus === 'not-found' ? t.bb(t.red) :
+                      t.bb(t.gold),
+                    color:
+                      audioStatus === 'found' ? t.green :
+                      audioStatus === 'not-found' ? t.red :
+                      t.gold,
+                    fontSize: 12,
+                    cursor: (audioStatus === 'checking' || audioStatus === 'playing') ? 'not-allowed' : 'pointer',
+                    fontFamily: fontSans,
+                    fontWeight: 600,
+                    opacity: (audioStatus === 'checking' || audioStatus === 'playing') ? 0.7 : 1,
+                    transition: 'all .2s',
+                  }}
+                >
+                  {audioStatus === 'idle' && '🔊 اختبار صوت الصلاة على النبي'}
+                  {audioStatus === 'checking' && '🔍 جاري الفحص...'}
+                  {audioStatus === 'playing' && '▶️ يتم التشغيل...'}
+                  {audioStatus === 'found' && '✅ تشغيل الصوت المحفوظ'}
+                  {audioStatus === 'not-found' && '❌ الملف غير موجود'}
+                </button>
+                {audioStatus === 'checking' && (
+                  <p style={{ fontSize: 10, color: t.muted, margin: '6px 0 0', textAlign: 'center' }}>
+                    جاري الفحص = التحقق من وجود الملف وتشغيله
+                  </p>
+                )}
+                {audioStatus === 'found' && (
+                  <p style={{ fontSize: 10, color: t.green, margin: '6px 0 0', textAlign: 'center' }}>
+                    ✓ الملف الصوتي جاهز ويعمل بشكل صحيح
+                  </p>
+                )}
+                {audioStatus === 'not-found' && (
+                  <p style={{ fontSize: 10, color: t.red, margin: '6px 0 0', textAlign: 'center' }}>
+                    ضع الملف في: public/audio/salah-ala-naby.mp3
+                  </p>
+                )}
+                */}
               </Card>
             </>
           )}

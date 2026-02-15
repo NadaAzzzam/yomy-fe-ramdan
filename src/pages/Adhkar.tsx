@@ -129,7 +129,7 @@ export function Adhkar() {
   const history = useHistory();
   const tabFromUrl = (() => {
     const p = new URLSearchParams(location.search);
-    const tab = p.get("tab") ?? location.hash.slice(1) || "";
+    const tab = p.get("tab") ?? (location.hash.slice(1) || "");
     const validId = ADHKAR_CATEGORIES.some((c) => c.id === tab);
     return validId ? tab : "morning";
   })();

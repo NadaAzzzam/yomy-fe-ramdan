@@ -147,13 +147,27 @@ body {
 }
 
 /* ─── Ionic overrides for theme & responsive ─── */
+/* Flex column: tabs take remaining space, tab bar is always at bottom (fixes Galaxy Tab / tablets). */
 ion-app {
   --ion-background-color: transparent;
   --ion-text-color: inherit;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex !important;
+  flex-direction: column !important;
   transition: color 0.4s, background-color 0.4s;
+}
+
+/* Tabs container: fill space above the tab bar so content scrolls inside outlet. */
+ion-tabs {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 ion-content {
@@ -164,11 +178,28 @@ ion-content {
   --padding-right: var(--safe-area-inset-right);
 }
 
-/* Tab bar above system nav / safe area on all Android devices */
-ion-tab-bar {
-  padding-bottom: max(8px, var(--safe-area-inset-bottom));
-  min-height: 56px;
+/* Tab bar: always visible; fixed to viewport bottom (Galaxy Tab FE and all tablets). */
+ion-tab-bar,
+ion-tab-bar.tab-bar-hidden,
+#app-main-tab-bar,
+ion-app > ion-tab-bar {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 56px !important;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  z-index: 9999 !important;
+  flex: none !important;
   transition: background 0.4s, border-color 0.4s;
+  background: var(--background, #f5f5f5) !important;
+  border-top: var(--border, 1px solid rgba(0,0,0,0.08)) !important;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
 }
 
 [dir="rtl"] ion-tab-button {

@@ -1,8 +1,10 @@
 /**
  * Notifications: random dua at user-chosen time + Egyptian Arabic reminder messages.
- * Uses Web Notifications in browser; for "when app is closed" on mobile, add
- * @capacitor/local-notifications and use native scheduling (see scheduleWithCapacitor).
+ * Uses Capacitor Local Notifications for native support (works when app is closed).
  */
+
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 
 export const REMINDER_MESSAGES_AR: string[] = [
   'تعالى افتح التطبيق واكمل مهامك 🌙',
@@ -43,32 +45,41 @@ export const LAST_TEN_NIGHTS_REMINDERS: string[] = [
   '💎 لا تضيّع ليالي العشر — كل ليلة ممكن تكون ليلة القدر',
 ];
 
-const DUA_CHANNEL_ID = 'yomy-dua';
-const REMINDER_CHANNEL_ID = 'yomy-reminder';
+/** Salah ala el naby messages */
+export const SALAH_ALA_NABY_MESSAGES: string[] = [
+  'اللهم صل على محمد وعلى آل محمد كما صليت على إبراهيم وعلى آل إبراهيم',
+  'اللهم بارك على محمد وعلى آل محمد كما باركت على إبراهيم وعلى آل إبراهيم',
+  'صلى الله عليه وسلم — أكثر من الصلاة على النبي اليوم 💚',
+  'اللهم صل وسلم وبارك على سيدنا محمد',
+  'اللهم صل على محمد النبي الأمي وعلى آله وصحبه وسلم تسليماً',
+];
 
-let scheduledTimeouts: ReturnType<typeof setTimeout>[] = [];
-
-function clearScheduledTimeouts() {
-  scheduledTimeouts.forEach((t) => clearTimeout(t));
-  scheduledTimeouts = [];
-}
+// Notification channel IDs
+const CHANNEL_DUA = 1000;
+const CHANNEL_REMINDER_START = 2000;
+const CHANNEL_CHALLENGE_START = 3000;
+const CHANNEL_LAST_TEN = 4000;
+const CHANNEL_SALAH_ALA_NABY_START = 5000;
 
 /** Request permission for notifications. Returns true if granted. */
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (typeof window === 'undefined') return false;
-  if (!('Notification' in window)) return false;
-  if (Notification.permission === 'granted') return true;
-  if (Notification.permission === 'denied') return false;
-  const perm = await Notification.requestPermission();
-  return perm === 'granted';
-}
+  if (!Capacitor.isNativePlatform()) {
+    // Web fallback
+    if (typeof window === 'undefined') return false;
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
+    const perm = await Notification.requestPermission();
+    return perm === 'granted';
+  }
 
-/** Pick next occurrence of HH:mm (today or tomorrow). */
-function getNextAt(hour: number, minute: number): Date {
-  const now = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
-  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
-  return next;
+  try {
+    const result = await LocalNotifications.requestPermissions();
+    return result.display === 'granted';
+  } catch (error) {
+    console.error('Failed to request notification permissions:', error);
+    return false;
+  }
 }
 
 /** Parse "HH:mm" or "H:mm" to { hour, minute }. */
@@ -86,89 +97,24 @@ function pickRandom<T>(arr: T[]): T | undefined {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-/** Show a browser notification (Web Notifications API). */
-function showWebNotification(title: string, body: string, tag?: string): void {
+/** Get next occurrence of HH:mm (today or tomorrow) */
+function getNextOccurrence(hour: number, minute: number): Date {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
+  if (next.getTime() <= now.getTime()) {
+    next.setDate(next.getDate() + 1);
+  }
+  return next;
+}
+
+/** Show a web notification (fallback for web platform) */
+function showWebNotification(title: string, body: string): void {
   if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;
   try {
-    new Notification(title, { body, tag: tag ?? 'yomy', icon: '/favicon.ico' });
+    new Notification(title, { body, icon: '/favicon.ico' });
   } catch {
     // ignore
   }
-}
-
-/** Schedule one random dua notification at the next occurrence of (hour, minute). */
-function scheduleNextDuaWeb(duas: { text: string }[], hour: number, minute: number): void {
-  if (duas.length === 0) return;
-  const next = getNextAt(hour, minute);
-  const ms = next.getTime() - Date.now();
-  if (ms <= 0) return;
-  const t = setTimeout(() => {
-    const dua = pickRandom(duas);
-    if (dua) {
-      showWebNotification('🤲 الدعاء قبل المغرب', dua.text.length > 120 ? dua.text.slice(0, 117) + '...' : dua.text, DUA_CHANNEL_ID);
-    }
-    scheduleNextDuaWeb(duas, hour, minute); // reschedule for next day (when app is open)
-  }, ms);
-  scheduledTimeouts.push(t);
-}
-
-/** Schedule next reminder (Egyptian Arabic) at one of the reminder hours. */
-const REMINDER_HOURS = [9, 14, 20]; // 9am, 2pm, 8pm
-function scheduleNextReminderWeb(): void {
-  const now = Date.now();
-  let nextAt: Date | null = null;
-  for (const hour of REMINDER_HOURS) {
-    const n = getNextAt(hour, 0);
-    if (n.getTime() > now && (nextAt == null || n.getTime() < nextAt.getTime())) nextAt = n;
-  }
-  if (!nextAt) return;
-  const ms = nextAt.getTime() - now;
-  if (ms <= 0) return;
-  const t = setTimeout(() => {
-    const msg = pickRandom(REMINDER_MESSAGES_AR);
-    if (msg) showWebNotification('يومي 🌙', msg, REMINDER_CHANNEL_ID);
-    scheduleNextReminderWeb();
-  }, ms);
-  scheduledTimeouts.push(t);
-}
-
-/**
- * For native "when app is closed" notifications, install @capacitor/local-notifications
- * and add a separate native scheduling layer that reads state from storage.
- * Web notifications below work while the app is open.
- */
-
-/** Schedule challenge reminders at strategic times (afternoon/evening). */
-const CHALLENGE_HOURS = [15, 18]; // 3pm, 6pm
-function scheduleNextChallengeReminderWeb(): void {
-  const now = Date.now();
-  let nextAt: Date | null = null;
-  for (const hour of CHALLENGE_HOURS) {
-    const n = getNextAt(hour, 30);
-    if (n.getTime() > now && (nextAt == null || n.getTime() < nextAt.getTime())) nextAt = n;
-  }
-  if (!nextAt) return;
-  const ms = nextAt.getTime() - now;
-  if (ms <= 0) return;
-  const t = setTimeout(() => {
-    const msg = pickRandom(CHALLENGE_REMINDERS);
-    if (msg) showWebNotification('تحدي رمضان 🌙', msg, 'yomy-challenge');
-    scheduleNextChallengeReminderWeb();
-  }, ms);
-  scheduledTimeouts.push(t);
-}
-
-/** Schedule last-10-nights special notification at 10pm. */
-function scheduleLastTenNightsWeb(ramadanDay: number): void {
-  if (ramadanDay < 21 || ramadanDay > 30) return;
-  const nextAt = getNextAt(22, 0);
-  const ms = nextAt.getTime() - Date.now();
-  if (ms <= 0) return;
-  const t = setTimeout(() => {
-    const msg = pickRandom(LAST_TEN_NIGHTS_REMINDERS);
-    if (msg) showWebNotification('العشر الأواخر ✨', msg, 'yomy-last-ten');
-  }, ms);
-  scheduledTimeouts.push(t);
 }
 
 /**
@@ -176,36 +122,154 @@ function scheduleLastTenNightsWeb(ramadanDay: number): void {
  * - If duaNotificationTime is set and duas exist: one random dua at that time (daily).
  * - If remindersEnabled: Egyptian Arabic reminders at 9:00, 14:00, 20:00 + challenge reminders.
  * - If in last 10 nights of Ramadan: special notification at 10pm.
+ * - Salah ala el naby notifications at user-defined times.
  * Call after permission is granted and when state changes.
  */
 export async function scheduleNotifications(
   duas: { text: string; day: string }[],
   duaNotificationTime: string | null,
   remindersEnabled: boolean,
-  ramadanDay?: number
+  ramadanDay?: number,
+  salahAlaNabyTimes?: string[]
 ): Promise<void> {
-  clearScheduledTimeouts();
+  // Cancel all existing notifications first
+  await cancelScheduledNotifications();
 
   const granted = await requestNotificationPermission();
   if (!granted) return;
 
-  const duaTime = duaNotificationTime ? parseTime(duaNotificationTime) : null;
+  const notifications: {
+    title: string;
+    body: string;
+    id: number;
+    schedule: { at: Date; repeats?: boolean; every?: 'day' };
+  }[] = [];
 
-  // Web notifications (work when app is open; for native when closed, add @capacitor/local-notifications)
+  // 1. Daily dua notification
+  const duaTime = duaNotificationTime ? parseTime(duaNotificationTime) : null;
   if (duaTime && duas.length > 0) {
-    scheduleNextDuaWeb(duas, duaTime.hour, duaTime.minute);
+    const dua = pickRandom(duas);
+    if (dua) {
+      const nextAt = getNextOccurrence(duaTime.hour, duaTime.minute);
+      notifications.push({
+        id: CHANNEL_DUA,
+        title: '🤲 الدعاء قبل المغرب',
+        body: dua.text.length > 120 ? dua.text.slice(0, 117) + '...' : dua.text,
+        schedule: { at: nextAt, repeats: true, every: 'day' },
+      });
+    }
   }
+
+  // 2. Motivational reminders
   if (remindersEnabled) {
-    scheduleNextReminderWeb();
-    scheduleNextChallengeReminderWeb();
-    // Last 10 nights special
-    if (ramadanDay != null && ramadanDay >= 21) {
-      scheduleLastTenNightsWeb(ramadanDay);
+    const reminderHours = [9, 14, 20]; // 9am, 2pm, 8pm
+    reminderHours.forEach((hour, index) => {
+      const msg = pickRandom(REMINDER_MESSAGES_AR);
+      if (msg) {
+        const nextAt = getNextOccurrence(hour, 0);
+        notifications.push({
+          id: CHANNEL_REMINDER_START + index,
+          title: 'يومي 🌙',
+          body: msg,
+          schedule: { at: nextAt, repeats: true, every: 'day' },
+        });
+      }
+    });
+
+    // 3. Challenge reminders
+    const challengeHours = [15, 18]; // 3pm, 6pm
+    challengeHours.forEach((hour, index) => {
+      const msg = pickRandom(CHALLENGE_REMINDERS);
+      if (msg) {
+        const nextAt = getNextOccurrence(hour, 30);
+        notifications.push({
+          id: CHANNEL_CHALLENGE_START + index,
+          title: 'تحدي رمضان 🌙',
+          body: msg,
+          schedule: { at: nextAt, repeats: true, every: 'day' },
+        });
+      }
+    });
+
+    // 4. Last 10 nights special notification
+    if (ramadanDay != null && ramadanDay >= 21 && ramadanDay <= 30) {
+      const msg = pickRandom(LAST_TEN_NIGHTS_REMINDERS);
+      if (msg) {
+        const nextAt = getNextOccurrence(22, 0); // 10pm
+        notifications.push({
+          id: CHANNEL_LAST_TEN,
+          title: 'العشر الأواخر ✨',
+          body: msg,
+          schedule: { at: nextAt, repeats: true, every: 'day' },
+        });
+      }
+    }
+  }
+
+  // 5. Salah ala el naby notifications
+  if (salahAlaNabyTimes && salahAlaNabyTimes.length > 0) {
+    salahAlaNabyTimes.forEach((timeStr, index) => {
+      const time = parseTime(timeStr);
+      if (time) {
+        const msg = pickRandom(SALAH_ALA_NABY_MESSAGES);
+        if (msg) {
+          const nextAt = getNextOccurrence(time.hour, time.minute);
+          notifications.push({
+            id: CHANNEL_SALAH_ALA_NABY_START + index,
+            title: 'الصلاة على النبي 💚',
+            body: msg,
+            schedule: { at: nextAt, repeats: true, every: 'day' },
+          });
+        }
+      }
+    });
+  }
+
+  // Schedule all notifications
+  if (notifications.length > 0) {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await LocalNotifications.schedule({
+          notifications: notifications.map(n => ({
+            id: n.id,
+            title: n.title,
+            body: n.body,
+            schedule: n.schedule,
+          })),
+        });
+        console.log(`Scheduled ${notifications.length} notifications`);
+      } catch (error) {
+        console.error('Failed to schedule notifications:', error);
+      }
+    } else {
+      // Web fallback: show next notification immediately for testing
+      const nextNotif = notifications[0];
+      if (nextNotif) {
+        showWebNotification(nextNotif.title, nextNotif.body);
+      }
     }
   }
 }
 
-/** Cancel all scheduled notifications (clear timeouts; Capacitor cancel is separate if needed). */
-export function cancelScheduledNotifications(): void {
-  clearScheduledTimeouts();
+/** Cancel all scheduled notifications */
+export async function cancelScheduledNotifications(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await LocalNotifications.cancel({
+        notifications: [
+          { id: CHANNEL_DUA },
+          { id: CHANNEL_REMINDER_START },
+          { id: CHANNEL_REMINDER_START + 1 },
+          { id: CHANNEL_REMINDER_START + 2 },
+          { id: CHANNEL_CHALLENGE_START },
+          { id: CHANNEL_CHALLENGE_START + 1 },
+          { id: CHANNEL_LAST_TEN },
+          // Cancel up to 10 possible salah ala naby notifications
+          ...Array.from({ length: 10 }, (_, i) => ({ id: CHANNEL_SALAH_ALA_NABY_START + i })),
+        ],
+      });
+    } catch (error) {
+      console.error('Failed to cancel notifications:', error);
+    }
+  }
 }

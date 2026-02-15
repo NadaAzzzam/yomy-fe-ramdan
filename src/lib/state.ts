@@ -135,6 +135,8 @@ export type AppState = {
   quranLastPage: number;
   /** Page numbers viewed today in Quran (for dynamic reading count) */
   todayQuranPagesViewed: number[];
+  /** Salah ala el naby notification times (array of HH:mm strings) */
+  salahAlaNabyTimes: string[];
 };
 
 export type Action =
@@ -191,7 +193,10 @@ export type Action =
   | { type: 'ADD_QURAN_MILESTONE_XP'; xp: number }
   | { type: 'SET_QURAN_POSITION'; surah: number; ayah: number }
   | { type: 'SET_QURAN_PAGE'; page: number }
-  | { type: 'ADD_QURAN_PAGE_VIEWED'; page: number };
+  | { type: 'ADD_QURAN_PAGE_VIEWED'; page: number }
+  | { type: 'SET_SALAH_ALA_NABY_TIMES'; times: string[] }
+  | { type: 'ADD_SALAH_ALA_NABY_TIME'; time: string }
+  | { type: 'REMOVE_SALAH_ALA_NABY_TIME'; index: number };
 
 const STORAGE_KEY = 'yomy-ramadan-state';
 
@@ -278,6 +283,7 @@ export function defaultState(): AppState {
     quranLastAyah: 0,
     quranLastPage: 1,
     todayQuranPagesViewed: [],
+    salahAlaNabyTimes: [],
   };
 }
 
@@ -493,6 +499,9 @@ function loadState(): AppState | null {
       todayQuranPagesViewed: Array.isArray(parsed.todayQuranPagesViewed)
         ? parsed.todayQuranPagesViewed.filter((p: unknown) => typeof p === 'number' && p >= 1 && p <= 604)
         : def.todayQuranPagesViewed,
+      salahAlaNabyTimes: Array.isArray(parsed.salahAlaNabyTimes)
+        ? parsed.salahAlaNabyTimes.filter((t: unknown) => typeof t === 'string' && /^\d{1,2}:\d{2}$/.test(t))
+        : def.salahAlaNabyTimes,
     };
   } catch {
     return null;
@@ -782,6 +791,14 @@ export function reducer(s: AppState, a: Action): AppState {
       if (viewed.includes(page)) return s;
       return { ...s, todayQuranPagesViewed: [...viewed, page] };
     }
+    case 'SET_SALAH_ALA_NABY_TIMES':
+      return { ...s, salahAlaNabyTimes: a.times };
+    case 'ADD_SALAH_ALA_NABY_TIME': {
+      if (s.salahAlaNabyTimes.includes(a.time)) return s;
+      return { ...s, salahAlaNabyTimes: [...s.salahAlaNabyTimes, a.time] };
+    }
+    case 'REMOVE_SALAH_ALA_NABY_TIME':
+      return { ...s, salahAlaNabyTimes: s.salahAlaNabyTimes.filter((_, i) => i !== a.index) };
     default:
       return s;
   }

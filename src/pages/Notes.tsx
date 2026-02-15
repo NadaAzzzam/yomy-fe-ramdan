@@ -506,6 +506,111 @@ export function Notes({ state, dispatch }: NotesProps) {
                   {permRequesting ? 'جاري الطلب...' : 'السماح بالإشعارات'}
                 </button>
               </Card>
+
+              {/* Salah Ala El Naby Notifications */}
+              <Card glow style={{ marginTop: 12 }}>
+                <Sec icon="💚" text="الصلاة على النبي" />
+                <p
+                  style={{
+                    fontSize: 11,
+                    color: t.textSec,
+                    margin: '0 0 12px',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  أضف أوقات محددة للتذكير بالصلاة على النبي ﷺ يوميًا
+                </p>
+
+                {/* Add new time */}
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    marginBottom: 12,
+                  }}
+                >
+                  <input
+                    type="time"
+                    onChange={(e) => {
+                      const time = e.target.value;
+                      if (time && parseTime(time)) {
+                        dispatch({ type: 'ADD_SALAH_ALA_NABY_TIME', time });
+                        e.target.value = '';
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      background: t.inputBg,
+                      border: `1px solid ${t.muted}28`,
+                      borderRadius: 12,
+                      padding: '10px 12px',
+                      color: t.text,
+                      fontSize: 14,
+                      fontFamily: fontSans,
+                    }}
+                  />
+                </div>
+
+                {/* List of times */}
+                {state.salahAlaNabyTimes.length > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    {state.salahAlaNabyTimes.map((time, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 12px',
+                          background: t.cardAlt,
+                          borderRadius: 12,
+                          border: `1px solid ${t.border}15`,
+                        }}
+                      >
+                        <span style={{ fontSize: 13, color: t.text, fontWeight: 600 }}>
+                          🕐 {time}
+                        </span>
+                        <button
+                          onClick={() =>
+                            dispatch({ type: 'REMOVE_SALAH_ALA_NABY_TIME', index: idx })
+                          }
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: 10,
+                            border: `1px solid ${t.red}30`,
+                            background: 'transparent',
+                            color: t.red,
+                            fontSize: 11,
+                            cursor: 'pointer',
+                            fontFamily: fontSans,
+                          }}
+                        >
+                          حذف
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {state.salahAlaNabyTimes.length === 0 && (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: t.muted,
+                      textAlign: 'center',
+                      margin: '8px 0',
+                    }}
+                  >
+                    لم تضف أي أوقات بعد
+                  </p>
+                )}
+              </Card>
             </>
           )}
 

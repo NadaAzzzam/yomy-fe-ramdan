@@ -202,8 +202,14 @@ function AppContent() {
 
   useEffect(() => {
     const ramInfo = getRamadanInfo();
-    scheduleNotifications(state.duas, state.duaNotificationTime, state.remindersEnabled, ramInfo.day);
-  }, [state.duas, state.duaNotificationTime, state.remindersEnabled]);
+    scheduleNotifications(
+      state.duas,
+      state.duaNotificationTime,
+      state.remindersEnabled,
+      ramInfo.day,
+      state.salahAlaNabyTimes
+    );
+  }, [state.duas, state.duaNotificationTime, state.remindersEnabled, state.salahAlaNabyTimes]);
 
   const isDark = useIsDark();
   const t = useTheme();
@@ -246,11 +252,12 @@ function AppContent() {
           </IonRouterOutlet>
 
           <IonTabBar
+            id="app-main-tab-bar"
             slot="bottom"
             style={{
               '--background': t.navBg,
               '--border': `1px solid ${t.muted}12`,
-            } as React.CSSProperties}
+            } as Record<string, string>}
           >
             <IonTabButton tab="home" href="/home">
               <IonIcon icon={home} />

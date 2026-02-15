@@ -11,6 +11,11 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: true,
     },
+    LocalNotifications: {
+      smallIcon: 'ic_stat_icon_config_sample',
+      iconColor: '#D4AF37',
+      sound: 'beep.wav',
+    },
   },
 };
 

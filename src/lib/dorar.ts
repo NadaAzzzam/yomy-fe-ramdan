@@ -197,7 +197,56 @@ export function isKnownSahihSource(source: string): boolean {
 const DORAR_TAFSIR_CACHE_PREFIX = 'yomy-dorar-tafsir:';
 const TAFSIR_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-/** Try to fetch tafsir for one ayah from Dorar. Returns null if endpoint not available or parse fails. */
+/** Max length for "final benefit" tafsir — keep it short for تدبر. */
+const MAX_BENEFIT_LENGTH = 520;
+/** If Dorar result has more than this many asaneed markers, treat as too scholarly and use local. */
+const MAX_ASANEED_MARKERS = 2;
+
+/** Asaneed/metadata markers in Dorar HTML — content after these is الراوي، المحدث، إلخ. */
+const ASANEED_MARKERS = [
+  'الراوي:',
+  'المحدث:',
+  'المصدر:',
+  'الصفحة أو الرقم:',
+  'خلاصة حكم المحدث:',
+  'الإسناد:',
+];
+
+/**
+ * Extract a short "final benefit" tafsir from Dorar HTML, stripping chains of narration (asaneed)
+ * and scholarly metadata. Returns null if content is too long or too asaneed-heavy (caller uses local).
+ */
+function extractFinalBenefitTafsir(html: string): string | null {
+  if (!html || typeof html !== 'string') return null;
+  const raw = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (raw.length < 20) return null;
+
+  // If many narrations (multiple "خلاصة حكم المحدث"), prefer local reflection
+  const rulingSplits = raw.split('خلاصة حكم المحدث');
+  if (rulingSplits.length > 2) return null;
+  const markerCount = ASANEED_MARKERS.reduce((n, m) => n + (raw.includes(m) ? 1 : 0), 0);
+  if (markerCount > MAX_ASANEED_MARKERS) return null;
+
+  // Take content only before the first asaneed block (actual tafsir usually comes first)
+  let benefit = raw;
+  for (const marker of ASANEED_MARKERS) {
+    const idx = benefit.indexOf(marker);
+    if (idx !== -1) benefit = benefit.slice(0, idx).trim();
+  }
+  benefit = benefit.replace(/\s+/g, ' ').trim();
+  if (benefit.length < 25) return null;
+
+  // If still too long, take first sentence(s) up to max length, break at last full stop or comma
+  if (benefit.length > MAX_BENEFIT_LENGTH) {
+    benefit = benefit.slice(0, MAX_BENEFIT_LENGTH + 1);
+    const lastPeriod = Math.max(benefit.lastIndexOf('.'), benefit.lastIndexOf('۔'), benefit.lastIndexOf('،'));
+    if (lastPeriod > MAX_BENEFIT_LENGTH / 2) benefit = benefit.slice(0, lastPeriod + 1).trim();
+    else benefit = benefit.slice(0, MAX_BENEFIT_LENGTH).trim();
+  }
+  return benefit.length >= 25 ? benefit : null;
+}
+
+/** Try to fetch tafsir for one ayah from Dorar. Returns only a short "final benefit" tafsir; null if unavailable or too long/asaneed-heavy (use local reflection). */
 export async function fetchTafsirFromDorar(
   surahNumber: number,
   ayah: number,
@@ -234,8 +283,8 @@ export async function fetchTafsirFromDorar(
       setTafsirCached(cacheKey, '');
       return null;
     }
-    const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    if (text.length < 20) {
+    const text = extractFinalBenefitTafsir(html);
+    if (!text) {
       setTafsirCached(cacheKey, '');
       return null;
     }

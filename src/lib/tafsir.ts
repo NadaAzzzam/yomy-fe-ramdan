@@ -31,6 +31,16 @@ function reflectionToDailyTafsir(r: QuranReflection): DailyTafsir {
   };
 }
 
+/**
+ * Day index for "آية اليوم للتدبر" so it changes every calendar day.
+ * During Ramadan uses Ramadan day (1-based → 0-based); otherwise uses calendar (date + month) mod 30.
+ */
+export function getTadabburDayIndex(ramadanDay1Based: number, reflectionsLength: number): number {
+  if (ramadanDay1Based >= 1 && ramadanDay1Based <= 30) return (ramadanDay1Based - 1) % reflectionsLength;
+  const d = new Date();
+  return (d.getDate() + d.getMonth() * 31 - 1) % Math.max(1, reflectionsLength);
+}
+
 /** Sync: daily ayah + local reflection. Caller passes the reflections array to avoid load-order issues. */
 export function getDailyTafsirSync(dayIdx: number, reflections: QuranReflection[]): DailyTafsir {
   const r = reflections[dayIdx % reflections.length]!;

@@ -25,7 +25,7 @@ import {
   DAILY_QURAN_REFLECTIONS,
   QURAN_MILESTONES,
 } from "../lib/data";
-import { useDailyTafsir } from "../lib/tafsir";
+import { useDailyTafsir, getTadabburDayIndex } from "../lib/tafsir";
 import { useHadithOfTheDay, formatHadithText } from "../lib/api";
 import { verifyHadithWithDorar, isKnownSahihSource } from "../lib/dorar";
 import { stripNonQuranicSuffixes } from "../lib/contentPolicy";
@@ -151,7 +151,8 @@ export function Home({ state, dispatch }: HomeProps) {
   const selectedHeart = HEART_FEELINGS.find((h) => h.id === state.heartFeeling);
   const noPressureMsg =
     NO_PRESSURE_MESSAGES[dayIdx % NO_PRESSURE_MESSAGES.length]!;
-  const { data: dailyTafsir } = useDailyTafsir(dayIdx, DAILY_QURAN_REFLECTIONS);
+  const tadabburDayIdx = getTadabburDayIndex(info.day, DAILY_QURAN_REFLECTIONS.length);
+  const { data: dailyTafsir } = useDailyTafsir(tadabburDayIdx, DAILY_QURAN_REFLECTIONS);
 
   // Check for Quran milestones
   const lastMilestone = QURAN_MILESTONES.filter(

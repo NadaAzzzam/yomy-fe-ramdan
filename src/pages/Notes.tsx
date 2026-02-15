@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useHistory } from 'react-router-dom';
 import { IonContent, IonPage } from '@ionic/react';
 import { Card } from '../components/Card';
 import { Sec } from '../components/Sec';
@@ -37,6 +37,7 @@ export function Notes({ state, dispatch }: NotesProps) {
   const [duaCat, setDuaCat] = useState('general');
   const [permRequesting, setPermRequesting] = useState(false);
   const location = useLocation();
+  const history = useHistory();
   const tabFromUrl = (() => {
     const p = new URLSearchParams(location.search);
     const tab = p.get('tab');
@@ -47,6 +48,11 @@ export function Notes({ state, dispatch }: NotesProps) {
   useEffect(() => {
     setActiveTab(tabFromUrl);
   }, [tabFromUrl]);
+
+  const setTab = (tab: 'duas' | 'podcasts' | 'journal') => {
+    setActiveTab(tab);
+    history.replace(`/notes?tab=${tab}`);
+  };
 
   const today = new Date();
   const todayStr =
@@ -119,13 +125,13 @@ export function Notes({ state, dispatch }: NotesProps) {
               margin: '8px 0 12px',
             }}
           >
-            <button style={tabStyle(activeTab === 'duas')} onClick={() => setActiveTab('duas')}>
+            <button style={tabStyle(activeTab === 'duas')} onClick={() => setTab('duas')}>
               🤲 أدعية
             </button>
-            <button style={tabStyle(activeTab === 'journal')} onClick={() => setActiveTab('journal')}>
+            <button style={tabStyle(activeTab === 'journal')} onClick={() => setTab('journal')}>
               📝 مذكرات
             </button>
-            <button style={tabStyle(activeTab === 'podcasts')} onClick={() => setActiveTab('podcasts')}>
+            <button style={tabStyle(activeTab === 'podcasts')} onClick={() => setTab('podcasts')}>
               🎙️ بودكاست
             </button>
           </div>

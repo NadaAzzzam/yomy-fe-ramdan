@@ -10,6 +10,7 @@ import { Chk } from "../components/Chk";
 import { Confetti } from "../components/Confetti";
 import { useTheme, useIsDark } from "../context/ThemeContext";
 import { getRamadanInfo, AR_DAYS } from "../lib/ramadan";
+import { formatHijriDate, getHijriDate, getHijriLunarDay } from "../lib/hijri";
 import { getJuzInfo } from "../lib/juz";
 import adhkarData from "../lib/adhkar.json";
 import {
@@ -61,6 +62,8 @@ export function Home({ state, dispatch }: HomeProps) {
   const isDark = useIsDark();
   const history = useHistory();
   const info = getRamadanInfo();
+  const hijri = getHijriDate();
+  const lunarDay = getHijriLunarDay();
 
   // Use same effective slots as the list (merge todaySlots with readingTimes) so progress always matches what user sees
   const effectiveSlots =
@@ -184,9 +187,19 @@ export function Home({ state, dispatch }: HomeProps) {
         <div className="ion-content-inner" style={{ position: "relative" }}>
           {/* ─── Header ─── */}
           <div style={{ textAlign: "center", padding: "10px 0 4px" }}>
-            <DynMoon day={info.day} size={34} />
+            <DynMoon day={lunarDay} size={34} />
             <p style={{ color: t.muted, fontSize: 11, margin: "5px 0 0" }}>
               {AR_DAYS[new Date().getDay()]}
+            </p>
+            <p
+              style={{
+                fontFamily: "Amiri",
+                fontSize: 14,
+                color: t.muted,
+                margin: "0 0 2px",
+              }}
+            >
+              {formatHijriDate(hijri)}
             </p>
             <h2
               style={{

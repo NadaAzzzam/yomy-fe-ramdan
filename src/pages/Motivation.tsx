@@ -6,6 +6,7 @@ import { Sec } from '../components/Sec';
 import { Chk } from '../components/Chk';
 import { useTheme, useIsDark } from '../context/ThemeContext';
 import { getRamadanInfo } from '../lib/ramadan';
+import { getHijriLunarDay } from '../lib/hijri';
 import {
   NIGHT_MOTIVATIONS,
   FAMILY_ACTIVITIES,
@@ -90,7 +91,7 @@ export function Motivation({ state, dispatch }: MotivationProps) {
       >
         <div className="ion-content-inner">
           <div style={{ textAlign: 'center', padding: '12px 0 6px' }}>
-            <DynMoon day={info.day} size={36} />
+            <DynMoon day={getHijriLunarDay()} size={36} />
             <h2
               style={{
                 fontFamily: 'Amiri',

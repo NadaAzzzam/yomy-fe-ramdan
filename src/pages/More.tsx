@@ -50,10 +50,16 @@ export function More() {
   const location = useLocation();
   const qiyamRef = useRef<HTMLDivElement>(null);
   const sadaqaRef = useRef<HTMLDivElement>(null);
+  const duaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const hash = location.hash.slice(1);
-    const el = hash === "qiyam" ? qiyamRef.current : hash === "sadaqa" ? sadaqaRef.current : null;
+    const refs: Record<string, HTMLDivElement | null> = {
+      qiyam: qiyamRef.current,
+      sadaqa: sadaqaRef.current,
+      dua: duaRef.current,
+    };
+    const el = refs[hash] ?? null;
     if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   }, [location.hash]);
 
@@ -71,7 +77,7 @@ export function More() {
           } as React.CSSProperties
         }
       >
-        <div style={{ position: "relative" }}>
+        <div className="ion-content-inner" style={{ position: "relative" }}>
           {/* ─── Header ─── */}
           <div style={{ textAlign: "center", padding: "14px 0 20px" }}>
             <span style={{ fontSize: 32 }}>📋</span>
@@ -189,8 +195,17 @@ export function More() {
             </Card>
           </div>
 
-          {/* Bottom spacer */}
-          <div style={{ height: 20 }} />
+          {/* الدعاء قبل المغرب — للوصول من تحديات اليوم */}
+          <div ref={duaRef} id="dua" style={{ scrollMarginTop: 16 }}>
+            <Card style={{ marginTop: 16 }}>
+              <span style={{ fontSize: 28 }}>🤲</span>
+              <h3 style={{ fontSize: 16, margin: "8px 0 4px", color: t.text }}>الدعاء قبل المغرب</h3>
+              <p style={{ fontSize: 12, color: t.muted, margin: 0, lineHeight: 1.6 }}>
+                وقت إجابة عند أذان المغرب. ادعُ بما تشاء ولو بدعاء قصير.
+              </p>
+            </Card>
+          </div>
+
         </div>
       </IonContent>
     </IonPage>

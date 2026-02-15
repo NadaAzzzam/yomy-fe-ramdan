@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { IonContent, IonPage } from "@ionic/react";
 import { Card } from "../components/Card";
 import { ShareButton } from "../components/ShareButton";
@@ -124,11 +125,21 @@ const ADHKAR_CATEGORIES: AdhkarCategory[] = [
 export function Adhkar() {
   const t = useTheme();
   const isDark = useIsDark();
-  const [selectedCat, setSelectedCat] = useState<string>("morning");
+  const location = useLocation();
+  const tabFromUrl = (() => {
+    const p = new URLSearchParams(location.search);
+    const tab = p.get("tab") ?? location.hash.slice(1) || "";
+    return tab === "evening" ? "evening" : "morning";
+  })();
+  const [selectedCat, setSelectedCat] = useState<string>(tabFromUrl);
   const [dhikrCounts, setDhikrCounts] = useState<Record<string, DhikrCount>>({});
   const [tappedKey, setTappedKey] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(true);
   const tapTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    setSelectedCat(tabFromUrl);
+  }, [tabFromUrl]);
 
   const activeCat = ADHKAR_CATEGORIES.find((c) => c.id === selectedCat) || ADHKAR_CATEGORIES[0]!;
 

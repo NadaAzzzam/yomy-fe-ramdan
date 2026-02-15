@@ -16,6 +16,12 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/aladhan-audio/, '/audio'),
       },
+      // Dorar.net blocks CORS from browser; proxy so dev works without CORS errors
+      '/api/dorar': {
+        target: 'https://dorar.net',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/dorar/, '/dorar_api.json'),
+      },
     },
   },
   build: {

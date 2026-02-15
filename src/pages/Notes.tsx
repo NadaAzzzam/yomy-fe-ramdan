@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { IonContent, IonPage } from '@ionic/react';
 import { Card } from '../components/Card';
 import { Sec } from '../components/Sec';
@@ -35,7 +36,17 @@ export function Notes({ state, dispatch }: NotesProps) {
   const [du, setDu] = useState('');
   const [duaCat, setDuaCat] = useState('general');
   const [permRequesting, setPermRequesting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'duas' | 'podcasts' | 'journal'>('duas');
+  const location = useLocation();
+  const tabFromUrl = (() => {
+    const p = new URLSearchParams(location.search);
+    const tab = p.get('tab');
+    return tab === 'podcasts' ? 'podcasts' : tab === 'journal' ? 'journal' : 'duas';
+  })();
+  const [activeTab, setActiveTab] = useState<'duas' | 'podcasts' | 'journal'>(tabFromUrl);
+
+  useEffect(() => {
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl]);
 
   const today = new Date();
   const todayStr =
@@ -115,7 +126,7 @@ export function Notes({ state, dispatch }: NotesProps) {
               📝 مذكرات
             </button>
             <button style={tabStyle(activeTab === 'podcasts')} onClick={() => setActiveTab('podcasts')}>
-              🎙️ دروس
+              🎙️ بودكاست
             </button>
           </div>
 
@@ -817,7 +828,7 @@ export function Notes({ state, dispatch }: NotesProps) {
           {/* ═══ PODCASTS TAB ═══ */}
           {activeTab === 'podcasts' && (
             <Card glow style={{ marginTop: 0 }}>
-              <Sec icon="🎙️" text={`بودكاست ودروس (${state.podcasts.length})`} />
+              <Sec icon="🎙️" text={`بودكاست (${state.podcasts.length})`} />
               {state.podcasts.map((p, i) => (
                 <div
                   key={i}

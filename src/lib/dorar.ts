@@ -6,6 +6,8 @@
  */
 
 const DORAR_API = 'https://dorar.net/dorar_api.json';
+/** In dev we use Vite proxy to avoid CORS. In production, use CORS proxy fallback when direct fetch fails. */
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 const CACHE_PREFIX = 'yomy-dorar:';
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -94,6 +96,52 @@ function parseDorarResultHtml(html: string): DorarVerifyResult {
 }
 
 /**
+ * Fetch Dorar API. In dev uses Vite proxy (/api/dorar) to avoid CORS. Otherwise tries direct, then CORS proxy.
+ */
+async function fetchDorarJson(skey: string): Promise<{ ahadith?: { result?: string } } | null> {
+  const query = `skey=${encodeURIComponent(skey)}`;
+  const directUrl = `${DORAR_API}?${query}`;
+
+  const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+  const proxyUrl = isDev ? `/api/dorar?${query}` : null;
+
+  const tryFetch = async (url: string, opts?: RequestInit): Promise<Response> => {
+    return fetch(url, {
+      ...opts,
+      headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; YomyApp/1)', ...opts?.headers },
+    });
+  };
+
+  // 1) In dev use proxy so same-origin, no CORS
+  if (proxyUrl) {
+    const res = await tryFetch(proxyUrl);
+    if (res.ok) return res.json() as Promise<{ ahadith?: { result?: string } }>;
+  }
+
+  // 2) Direct (works in Capacitor/native or same-origin)
+  try {
+    const res = await tryFetch(directUrl);
+    if (res.ok) return res.json() as Promise<{ ahadith?: { result?: string } }>;
+  } catch {
+    /* CORS or network */
+  }
+
+  // 3) CORS proxy fallback for browser when Dorar blocks origin
+  try {
+    const res = await tryFetch(CORS_PROXY + encodeURIComponent(directUrl));
+    if (!res.ok) return null;
+    const text = await res.text();
+    try {
+      return JSON.parse(text) as { ahadith?: { result?: string } };
+    } catch {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Search Dorar.net for hadith by key phrase. Returns verification result.
  * Results are cached by search key for 30 days.
  */
@@ -105,16 +153,12 @@ export async function verifyHadithWithDorar(hadithText: string): Promise<DorarVe
   if (cached !== null) return cached;
 
   try {
-    const url = `${DORAR_API}?skey=${encodeURIComponent(skey)}`;
-    const res = await fetch(url, {
-      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; YomyApp/1)' },
-    });
-    if (!res.ok) {
-      const result: DorarVerifyResult = { verified: false, detail: `http_${res.status}` };
+    const data = await fetchDorarJson(skey);
+    if (!data) {
+      const result: DorarVerifyResult = { verified: false, detail: 'network_error' };
       setCachedVerify(skey, result);
       return result;
     }
-    const data = (await res.json()) as { ahadith?: { result?: string } };
     const html = data?.ahadith?.result ?? '';
     const result = parseDorarResultHtml(html);
     setCachedVerify(skey, result);
@@ -147,4 +191,80 @@ export function isKnownSahihSource(source: string): boolean {
     s.includes('صحيح ابن حبان') ||
     s.includes('إسناده صحيح')
   );
+}
+
+/* ─── Tafsir (موسوعة التفسير) ─── */
+const DORAR_TAFSIR_CACHE_PREFIX = 'yomy-dorar-tafsir:';
+const TAFSIR_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/** Try to fetch tafsir for one ayah from Dorar. Returns null if endpoint not available or parse fails. */
+export async function fetchTafsirFromDorar(
+  surahNumber: number,
+  ayah: number,
+): Promise<string | null> {
+  const cacheKey = `${surahNumber}_${ayah}`;
+  const stored = getTafsirCached(cacheKey);
+  if (stored !== undefined) return stored.length > 0 ? stored : null;
+
+  const skey = `${surahNumber}_${ayah}`;
+  const query = `skey=${encodeURIComponent(skey)}`;
+  const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+  const base = isDev ? '/api/dorar' : DORAR_API;
+  const url = `${base}?${query}`;
+
+  try {
+    let res: Response;
+    if (isDev) {
+      res = await fetch(url, { headers: { Accept: 'application/json' } });
+    } else {
+      try {
+        res = await fetch(`${DORAR_API}?${query}`, { headers: { Accept: 'application/json' } });
+      } catch {
+        res = await fetch(CORS_PROXY + encodeURIComponent(`${DORAR_API}?${query}`));
+      }
+    }
+    if (!res.ok) {
+      setTafsirCached(cacheKey, '');
+      return null;
+    }
+    const data = (await res.json()) as { ahadith?: { result?: string }; tafaseer?: { result?: string }; result?: string };
+    const html =
+      data?.tafaseer?.result ?? (data as { tafsir?: string }).tafsir ?? data?.ahadith?.result ?? data?.result ?? '';
+    if (!html || typeof html !== 'string') {
+      setTafsirCached(cacheKey, '');
+      return null;
+    }
+    const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (text.length < 20) {
+      setTafsirCached(cacheKey, '');
+      return null;
+    }
+    setTafsirCached(cacheKey, text);
+    return text;
+  } catch {
+    setTafsirCached(cacheKey, '');
+    return null;
+  }
+}
+
+/** Returns cached tafsir string, or '' if cached as no result, or undefined if missing/expired. */
+function getTafsirCached(key: string): string | undefined {
+  try {
+    const raw = localStorage.getItem(DORAR_TAFSIR_CACHE_PREFIX + key);
+    if (!raw) return undefined;
+    const { exp, text } = JSON.parse(raw) as { exp: number; text: string };
+    if (Date.now() > exp) return undefined;
+    return text;
+  } catch {
+    return undefined;
+  }
+}
+
+function setTafsirCached(key: string, text: string | null): void {
+  try {
+    const exp = Date.now() + TAFSIR_CACHE_TTL_MS;
+    localStorage.setItem(DORAR_TAFSIR_CACHE_PREFIX + key, JSON.stringify({ exp, text }));
+  } catch {
+    /* ignore */
+  }
 }

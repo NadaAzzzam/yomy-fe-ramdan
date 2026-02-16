@@ -1,1 +1,0 @@
-import{j as r}from"./vendor-BiHAOAa9.js";import{u as s}from"./index-B3VVS0cc.js";function m({icon:t,text:o}){const e=s();return r.jsxs("p",{style:{fontSize:13,color:e.goldLight,margin:"0 0 10px",fontWeight:700},children:[t," ",o]})}export{m as S};

@@ -13,6 +13,7 @@ type DhikrItem = {
   meaning: string;
   source: string;
   repetition: number;
+  type?: "quran" | "dhikr";
 };
 
 type AdhkarCategory = {
@@ -21,6 +22,31 @@ type AdhkarCategory = {
   icon: string;
   color: string;
   data: DhikrItem[];
+};
+
+// Helper function to detect if a dhikr is from Quran
+const isQuranVerse = (dhikr: DhikrItem): boolean => {
+  if (dhikr.type === "quran") return true;
+  const text = dhikr.arabic;
+  return (
+    text.includes("آيَةُ الْكُرْسِيِّ") ||
+    text.startsWith("قُلْ هُوَ ٱللَّهُ أَحَدٌ") ||
+    text.startsWith("قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ") ||
+    text.startsWith("قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ") ||
+    dhikr.meaning?.includes("سورة") ||
+    dhikr.meaning?.includes("آية")
+  );
+};
+
+// Helper function to sort adhkar - Quran verses first, then regular adhkar
+const sortAdhkar = (data: DhikrItem[]): DhikrItem[] => {
+  return [...data].sort((a, b) => {
+    const aIsQuran = isQuranVerse(a);
+    const bIsQuran = isQuranVerse(b);
+    if (aIsQuran && !bIsQuran) return -1;
+    if (!aIsQuran && bIsQuran) return 1;
+    return 0;
+  });
 };
 
 type DhikrCount = {
@@ -34,91 +60,105 @@ const ADHKAR_CATEGORIES: AdhkarCategory[] = [
     label: "أذكار الصباح",
     icon: "☀️",
     color: "#FDB31",
-    data: adhkarData.morning as DhikrItem[],
+    data: sortAdhkar(adhkarData.morning as DhikrItem[]),
   },
   {
     id: "evening",
     label: "أذكار المساء",
     icon: "🌅",
     color: "#F87C13",
-    data: adhkarData.evening as DhikrItem[],
+    data: sortAdhkar(adhkarData.evening as DhikrItem[]),
   },
   {
     id: "afterPrayer",
     label: "أذكار بعد الصلاة",
     icon: "🤲",
     color: "#B8860B",
-    data: adhkarData.afterPrayer as DhikrItem[],
+    data: sortAdhkar(adhkarData.afterPrayer as DhikrItem[]),
   },
   {
     id: "beforeSleep",
     label: "أذكار النوم",
     icon: "🌙",
     color: "#7B68EE",
-    data: adhkarData.beforeSleep as DhikrItem[],
+    data: sortAdhkar(adhkarData.beforeSleep as DhikrItem[]),
   },
   {
     id: "uponWaking",
     label: "أذكار الاستيقاظ",
     icon: "🌄",
     color: "#FF6B6B",
-    data: adhkarData.uponWaking as DhikrItem[],
+    data: sortAdhkar(adhkarData.uponWaking as DhikrItem[]),
   },
   {
     id: "enteringHome",
     label: "دخول المنزل",
     icon: "🏠",
     color: "#4ECDC4",
-    data: adhkarData.enteringHome as DhikrItem[],
+    data: sortAdhkar(adhkarData.enteringHome as DhikrItem[]),
   },
   {
     id: "leavingHome",
     label: "الخروج من المنزل",
     icon: "🚪",
     color: "#95E1D3",
-    data: adhkarData.leavingHome as DhikrItem[],
+    data: sortAdhkar(adhkarData.leavingHome as DhikrItem[]),
   },
   {
     id: "enteringMosque",
     label: "دخول المسجد",
     icon: "🕌",
     color: "#38A169",
-    data: adhkarData.enteringMosque as DhikrItem[],
+    data: sortAdhkar(adhkarData.enteringMosque as DhikrItem[]),
   },
   {
     id: "leavingMosque",
     label: "الخروج من المسجد",
     icon: "🕋",
     color: "#2F855A",
-    data: adhkarData.leavingMosque as DhikrItem[],
+    data: sortAdhkar(adhkarData.leavingMosque as DhikrItem[]),
   },
   {
     id: "beforeEating",
     label: "قبل الطعام",
     icon: "🍽️",
     color: "#F97316",
-    data: adhkarData.beforeEating as DhikrItem[],
+    data: sortAdhkar(adhkarData.beforeEating as DhikrItem[]),
   },
   {
     id: "afterEating",
     label: "بعد الطعام",
     icon: "✨",
     color: "#EA580C",
-    data: adhkarData.afterEating as DhikrItem[],
+    data: sortAdhkar(adhkarData.afterEating as DhikrItem[]),
   },
   {
     id: "beforeWudu",
     label: "قبل الوضوء",
     icon: "💧",
     color: "#3B82F6",
-    data: adhkarData.beforeWudu as DhikrItem[],
+    data: sortAdhkar(adhkarData.beforeWudu as DhikrItem[]),
   },
   {
     id: "afterWudu",
     label: "بعد الوضوء",
     icon: "💦",
     color: "#2563EB",
-    data: adhkarData.afterWudu as DhikrItem[],
+    data: sortAdhkar(adhkarData.afterWudu as DhikrItem[]),
+  },
+  {
+    id: "enteringBathroom",
+    label: "دخول الخلاء",
+    icon: "🚻",
+    color: "#64748B",
+    data: sortAdhkar(adhkarData.enteringBathroom as DhikrItem[]),
+  },
+  {
+    id: "leavingBathroom",
+    label: "الخروج من الخلاء",
+    icon: "🚾",
+    color: "#475569",
+    data: sortAdhkar(adhkarData.leavingBathroom as DhikrItem[]),
   },
 ];
 
@@ -438,6 +478,7 @@ export function Adhkar() {
                 Math.round((currentCount / dhikr.repetition) * 100)
               );
               const hasMultiple = dhikr.repetition > 1;
+              const isQuran = isQuranVerse(dhikr);
 
               return (
                 <div
@@ -449,15 +490,23 @@ export function Adhkar() {
                       ? isDark
                         ? `linear-gradient(135deg, ${t.green}0C, ${t.green}06)`
                         : `linear-gradient(135deg, ${t.green}12, ${t.green}08)`
-                      : t.card,
+                      : isQuran
+                        ? isDark
+                          ? `linear-gradient(135deg, ${t.gold}08, ${activeCat.color}08)`
+                          : `linear-gradient(135deg, ${t.gold}12, ${activeCat.color}10)`
+                        : t.card,
                     borderRadius: 18,
                     padding: 0,
                     border: isCompleted
                       ? `1.5px solid ${t.green}30`
-                      : `1px solid ${t.border}30`,
+                      : isQuran
+                        ? `2px solid ${t.gold}40`
+                        : `1px solid ${t.border}30`,
                     boxShadow: isTapped
                       ? `0 0 20px ${activeCat.color}25`
-                      : `0 2px 8px ${t.shadowColor}`,
+                      : isQuran
+                        ? `0 3px 12px ${t.gold}15`
+                        : `0 2px 8px ${t.shadowColor}`,
                     transition: "all .2s ease",
                     transform: isTapped ? "scale(0.98)" : "scale(1)",
                     cursor: isCompleted ? "default" : "pointer",
@@ -508,6 +557,26 @@ export function Adhkar() {
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {/* Quran badge */}
+                        {isQuran && (
+                          <span
+                            style={{
+                              background: isDark ? `${t.gold}20` : `${t.gold}25`,
+                              color: t.gold,
+                              fontSize: 10,
+                              fontWeight: 800,
+                              padding: "4px 8px",
+                              borderRadius: 8,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                              border: `1px solid ${t.gold}40`,
+                            }}
+                          >
+                            <span style={{ fontSize: 12 }}>📖</span>
+                            <span>قرآن</span>
+                          </span>
+                        )}
                         {/* Index badge */}
                         <span
                           style={{
@@ -636,25 +705,57 @@ export function Adhkar() {
                           ? isDark
                             ? `${t.green}06`
                             : `${t.green}08`
-                          : isDark
-                            ? `${activeCat.color}06`
-                            : `${activeCat.color}08`,
+                          : isQuran
+                            ? isDark
+                              ? `${t.gold}10`
+                              : `${t.gold}15`
+                            : isDark
+                              ? `${activeCat.color}06`
+                              : `${activeCat.color}08`,
                         borderRadius: 14,
-                        padding: "14px 16px",
+                        padding: isQuran ? "18px 20px" : "14px 16px",
                         marginBottom: 8,
                         transition: "all .3s",
                         position: "relative",
+                        border: isQuran ? `1px solid ${t.gold}25` : "none",
                       }}
                     >
+                      {isQuran && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 8,
+                            right: 12,
+                            fontSize: 24,
+                            opacity: 0.15,
+                          }}
+                        >
+                          ﴿
+                        </div>
+                      )}
+                      {isQuran && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: 8,
+                            left: 12,
+                            fontSize: 24,
+                            opacity: 0.15,
+                          }}
+                        >
+                          ﴾
+                        </div>
+                      )}
                       <p
                         style={{
                           fontFamily: "Amiri",
-                          fontSize: 19,
+                          fontSize: isQuran ? 21 : 19,
                           color: isCompleted ? `${t.text}99` : t.text,
-                          lineHeight: 2,
+                          lineHeight: isQuran ? 2.2 : 2,
                           margin: 0,
                           textAlign: "center",
                           transition: "color .3s",
+                          fontWeight: isQuran ? 600 : 400,
                         }}
                       >
                         {dhikr.arabic}

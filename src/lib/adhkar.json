@@ -83,6 +83,34 @@
       "meaning": "أستغفر الله وأتوب إليه",
       "source": "رواه البخاري",
       "repetition": 100
+    },
+    {
+      "arabic": "آيَةُ الْكُرْسِيِّ: اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَةٌۭ وَلَا نَوْمٌۭ ۚ لَّهُۥ مَا فِى ٱلسَّمَٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَن ذَا ٱلَّذِى يَشْفَعُ عِندَهُۥٓ إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَىْءٍۢ مِّنْ عِلْمِهِۦٓ إِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ",
+      "transliteration": "Āyatu l-kursiyy: Allāhu lā ilāha illā huwa l-ḥayyu l-qayyūm...",
+      "meaning": "آية الكرسي - من قرأها حين يصبح لم يزل عليه من الله حافظ حتى يمسي",
+      "source": "رواه النسائي وصححه الألباني",
+      "repetition": 1
+    },
+    {
+      "arabic": "قُلْ هُوَ ٱللَّهُ أَحَدٌ، ٱللَّهُ ٱلصَّمَدُ، لَمْ يَلِدْ وَلَمْ يُولَدْ، وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ",
+      "transliteration": "Qul huwa llāhu aḥad, allāhu ṣ-ṣamad, lam yalid wa-lam yūlad, wa-lam yakun lahu kufuwan aḥad",
+      "meaning": "سورة الإخلاص - قل هو الله أحد (ثلاث مرات)",
+      "source": "رواه أبو داود والترمذي",
+      "repetition": 3
+    },
+    {
+      "arabic": "قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ، مِن شَرِّ مَا خَلَقَ، وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ، وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِى ٱلْعُقَدِ، وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ",
+      "transliteration": "Qul aʿūdhu bi-rabbi l-falaq, min sharri mā khalaq, wa-min sharri ghāsiqin idhā waqab, wa-min sharri n-naffāthāti fī l-ʿuqad, wa-min sharri ḥāsidin idhā ḥasad",
+      "meaning": "سورة الفلق (ثلاث مرات)",
+      "source": "رواه أبو داود والترمذي",
+      "repetition": 3
+    },
+    {
+      "arabic": "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ، مَلِكِ ٱلنَّاسِ، إِلَٰهِ ٱلنَّاسِ، مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ، ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ، مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ",
+      "transliteration": "Qul aʿūdhu bi-rabbi n-nās, maliki n-nās, ilāhi n-nās, min sharri l-waswāsi l-khannās, alladhī yuwaswisu fī ṣudūri n-nās, mina l-jinnati wa-n-nās",
+      "meaning": "سورة الناس (ثلاث مرات)",
+      "source": "رواه أبو داود والترمذي",
+      "repetition": 3
     }
   ],
   "evening": [
@@ -162,6 +190,34 @@
       "meaning": "أستغفر الله وأتوب إليه",
       "source": "رواه البخاري",
       "repetition": 100
+    },
+    {
+      "arabic": "آيَةُ الْكُرْسِيِّ: اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَةٌۭ وَلَا نَوْمٌۭ ۚ لَّهُۥ مَا فِى ٱلسَّمَٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَن ذَا ٱلَّذِى يَشْفَعُ عِندَهُۥٓ إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَىْءٍۢ مِّنْ عِلْمِهِۦٓ إِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ",
+      "transliteration": "Āyatu l-kursiyy: Allāhu lā ilāha illā huwa l-ḥayyu l-qayyūm...",
+      "meaning": "آية الكرسي - من قرأها حين يمسي لم يزل عليه من الله حافظ حتى يصبح",
+      "source": "رواه النسائي وصححه الألباني",
+      "repetition": 1
+    },
+    {
+      "arabic": "قُلْ هُوَ ٱللَّهُ أَحَدٌ، ٱللَّهُ ٱلصَّمَدُ، لَمْ يَلِدْ وَلَمْ يُولَدْ، وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ",
+      "transliteration": "Qul huwa llāhu aḥad, allāhu ṣ-ṣamad, lam yalid wa-lam yūlad, wa-lam yakun lahu kufuwan aḥad",
+      "meaning": "سورة الإخلاص (ثلاث مرات)",
+      "source": "رواه أبو داود والترمذي",
+      "repetition": 3
+    },
+    {
+      "arabic": "قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ، مِن شَرِّ مَا خَلَقَ، وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ، وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِى ٱلْعُقَدِ، وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ",
+      "transliteration": "Qul aʿūdhu bi-rabbi l-falaq, min sharri mā khalaq, wa-min sharri ghāsiqin idhā waqab, wa-min sharri n-naffāthāti fī l-ʿuqad, wa-min sharri ḥāsidin idhā ḥasad",
+      "meaning": "سورة الفلق (ثلاث مرات)",
+      "source": "رواه أبو داود والترمذي",
+      "repetition": 3
+    },
+    {
+      "arabic": "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ، مَلِكِ ٱلنَّاسِ، إِلَٰهِ ٱلنَّاسِ، مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ، ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ، مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ",
+      "transliteration": "Qul aʿūdhu bi-rabbi n-nās, maliki n-nās, ilāhi n-nās, min sharri l-waswāsi l-khannās, alladhī yuwaswisu fī ṣudūri n-nās, mina l-jinnati wa-n-nās",
+      "meaning": "سورة الناس (ثلاث مرات)",
+      "source": "رواه أبو داود والترمذي",
+      "repetition": 3
     }
   ],
   "afterPrayer": [
@@ -299,6 +355,13 @@
       "meaning": "الحمد لله الذي أطعمنا وسقانا، وكفانا، وآوانا، فكم ممن لا كافي له ولا مؤوي",
       "source": "رواه مسلم",
       "repetition": 1
+    },
+    {
+      "arabic": "اللَّهُمَّ قِنِي عَذَابَكَ يَوْمَ تَجْمَعُ عِبَادَكَ",
+      "transliteration": "Allāhumma qinī ʿadhābaka yawma tajmaʿu ʿibādak",
+      "meaning": "اللهم قني عذابك يوم تجمع عبادك - صيغة أخرى",
+      "source": "رواه الترمذي",
+      "repetition": 1
     }
   ],
   "uponWaking": [
@@ -306,6 +369,20 @@
       "arabic": "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ",
       "transliteration": "Al-ḥamdu lillāhi lladhī aḥyānā baʿda mā amātanā wa-ilayhi n-nushūr",
       "meaning": "الحمد لله الذي أحيانا بعد ما أماتنا وإليه النشور",
+      "source": "رواه البخاري ومسلم",
+      "repetition": 1
+    },
+    {
+      "arabic": "الْحَمْدُ لِلَّهِ الَّذِي عَافَانِي فِي جَسَدِي، وَرَدَّ عَلَيَّ رُوحِي، وَأَذِنَ لِي بِذِكْرِهِ",
+      "transliteration": "Al-ḥamdu lillāhi lladhī ʿāfānī fī jasadī, wa-radda ʿalayya rūḥī, wa-adhana lī bi-dhikrih",
+      "meaning": "الحمد لله الذي عافاني في جسدي، ورد علي روحي، وأذن لي بذكره",
+      "source": "رواه الترمذي وحسنه",
+      "repetition": 1
+    },
+    {
+      "arabic": "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ، سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلَا إِلَهَ إِلَّا اللَّهُ، وَاللَّهُ أَكْبَرُ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ الْعَلِيِّ الْعَظِيمِ، رَبِّ اغْفِرْ لِي",
+      "transliteration": "Lā ilāha illā llāhu waḥdahu lā sharīka lah, lahu l-mulku wa-lahu l-ḥamdu wa-huwa ʿalā kulli shayʾin qadīr, subḥāna llāh, wa-l-ḥamdu lillāh, wa-lā ilāha illā llāh, wa-llāhu akbar, wa-lā ḥawla wa-lā quwwata illā billāhi l-ʿaliyyi l-ʿaẓīm, rabbi ghfir lī",
+      "meaning": "دعاء من انتبه من الليل - من قاله غُفر له، وإن دعا استُجيب له، وإن توضأ وصلى قُبلت صلاته",
       "source": "رواه البخاري",
       "repetition": 1
     }
@@ -379,6 +456,24 @@
       "transliteration": "Ashhadu an lā ilāha illā llāhu waḥdahu lā sharīka lah, wa-ashhadu anna muḥammadan ʿabduhu wa-rasūluh, allāhummaj ʿalnī mina t-tawwābīn, wa-jʿalnī mina l-mutaṭahhirīn",
       "meaning": "أشهد أن لا إله إلا الله وحده لا شريك له، وأشهد أن محمدا عبده ورسوله، اللهم اجعلني من التوابين، واجعلني من المتطهرين",
       "source": "رواه مسلم",
+      "repetition": 1
+    }
+  ],
+  "enteringBathroom": [
+    {
+      "arabic": "بِسْمِ اللَّهِ، اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ",
+      "transliteration": "Bismi llāh, allāhumma innī aʿūdhu bika mina l-khubuthi wa-l-khabāʾith",
+      "meaning": "بسم الله، اللهم إني أعوذ بك من الخبث والخبائث - يقال قبل الدخول",
+      "source": "رواه البخاري ومسلم",
+      "repetition": 1
+    }
+  ],
+  "leavingBathroom": [
+    {
+      "arabic": "غُفْرَانَكَ",
+      "transliteration": "Ghufrānak",
+      "meaning": "غفرانك - يقال عند الخروج من الخلاء",
+      "source": "رواه أبو داود والترمذي",
       "repetition": 1
     }
   ]

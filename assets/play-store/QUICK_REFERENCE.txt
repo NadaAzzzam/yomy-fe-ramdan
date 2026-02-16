@@ -1,0 +1,56 @@
+╔══════════════════════════════════════════════════════════════╗
+║          GOOGLE PLAY FEATURE GRAPHIC REQUIREMENTS            ║
+╚══════════════════════════════════════════════════════════════╝
+
+📐 DIMENSIONS
+   1024 x 500 pixels (exactly)
+
+📄 FORMAT
+   JPG or PNG
+
+📊 ASPECT RATIO
+   2:1
+
+🎨 TRANSPARENCY
+   NOT ALLOWED (must have solid background)
+
+💾 FILE SIZE
+   Maximum 15MB
+
+🎯 PURPOSE
+   • Featured by Google at top of Play Store listing
+   • Promotional sections
+   • Curated collections
+
+✅ QUICK CHECKLIST
+   □ Exactly 1024 x 500 pixels
+   □ PNG or JPG format
+   □ No transparency/alpha channel
+   □ Under 15MB
+   □ High quality, clear visuals
+   □ Text readable at small sizes
+   □ Brand consistent
+
+🎨 DESIGN TIPS
+   • Keep important content 50px from edges
+   • Text minimum 80px from edges
+   • Font size minimum 40px
+   • Use high contrast
+   • Include app name/logo
+   • Keep text minimal
+
+🚫 AVOID
+   ✗ Transparency
+   ✗ Device frames
+   ✗ Excessive text
+   ✗ Low resolution
+   ✗ Misleading imagery
+   ✗ Pricing info
+
+📁 SAVE TO
+   assets/play-store/feature-graphic.png
+
+🔗 UPLOAD AT
+   Google Play Console > Store presence > Main store listing > Graphics
+
+═══════════════════════════════════════════════════════════════

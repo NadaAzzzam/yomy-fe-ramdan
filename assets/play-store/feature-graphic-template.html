@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feature Graphic Template - Yomy Ramadan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', 'Poppins', sans-serif;
+            background: #f5f5f5;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .info {
+            max-width: 1024px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .info h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #0D7377;
+        }
+
+        .info p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .canvas-label {
+            position: absolute;
+            top: -30px;
+            left: 0;
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .feature-graphic {
+            width: 1024px;
+            height: 500px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #ddd;
+        }
+
+        /* Safe zone guides */
+        .safe-zone {
+            position: absolute;
+            border: 2px dashed rgba(255, 0, 0, 0.3);
+            pointer-events: none;
+        }
+
+        .safe-zone-50 {
+            top: 50px;
+            left: 50px;
+            right: 50px;
+            bottom: 50px;
+            width: calc(100% - 100px);
+            height: calc(100% - 100px);
+        }
+
+        .safe-zone-80 {
+            top: 80px;
+            left: 80px;
+            right: 80px;
+            bottom: 80px;
+            width: calc(100% - 160px);
+            height: calc(100% - 160px);
+            border-color: rgba(0, 0, 255, 0.3);
+        }
+
+        /* Template styles */
+        .template {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Template 1: Centered */
+        .template-1 {
+            background: linear-gradient(135deg, #0D7377 0%, #14FFEC 100%);
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .template-1 .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .template-1 .logo {
+            width: 120px;
+            height: 120px;
+        }
+
+        .template-1 .title {
+            font-family: 'Amiri', serif;
+            font-size: 72px;
+            font-weight: 700;
+            color: white;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .template-1 .subtitle {
+            font-family: 'Poppins', sans-serif;
+            font-size: 32px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.95);
+            text-align: center;
+        }
+
+        /* Template 2: Split */
+        .template-2 {
+            background: #1A1A2E;
+        }
+
+        .template-2 .left {
+            flex: 1;
+            height: 100%;
+            background: linear-gradient(135deg, #0D7377 0%, #14FFEC 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .template-2 .pattern {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.2;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.1) 35px, rgba(255,255,255,.1) 70px);
+        }
+
+        .template-2 .crescent {
+            font-size: 180px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+
+        .template-2 .right {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 0 40px;
+        }
+
+        .template-2 .title {
+            font-family: 'Amiri', serif;
+            font-size: 56px;
+            font-weight: 700;
+            color: white;
+            text-align: center;
+        }
+
+        .template-2 .features {
+            font-family: 'Cairo', sans-serif;
+            font-size: 28px;
+            color: #14FFEC;
+            text-align: center;
+            direction: rtl;
+        }
+
+        /* Template 3: Dark with overlay */
+        .template-3 {
+            background: linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .template-3 .logo-title {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .template-3 .logo {
+            width: 100px;
+            height: 100px;
+        }
+
+        .template-3 .title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .template-3 .title {
+            font-family: 'Amiri', serif;
+            font-size: 64px;
+            font-weight: 700;
+            color: #D4AF37;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .template-3 .subtitle {
+            font-family: 'Poppins', sans-serif;
+            font-size: 32px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .template-3 .tagline {
+            font-family: 'Cairo', sans-serif;
+            font-size: 28px;
+            color: #14FFEC;
+            text-align: center;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1024px;
+        }
+
+        .controls button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #0D7377;
+            color: white;
+            transition: all 0.3s;
+        }
+
+        .controls button:hover {
+            background: #14FFEC;
+            color: #1A1A2E;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .controls button.active {
+            background: #D4AF37;
+            color: #1A1A2E;
+        }
+
+        .toggle-guides {
+            background: #666;
+        }
+
+        .toggle-guides:hover {
+            background: #888;
+        }
+
+        .download-btn {
+            background: #D4AF37;
+            color: #1A1A2E;
+        }
+
+        .download-btn:hover {
+            background: #FFD700;
+        }
+
+        /* Responsive preview */
+        @media (max-width: 1100px) {
+            .feature-graphic {
+                transform: scale(0.8);
+                transform-origin: top center;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .feature-graphic {
+                transform: scale(0.6);
+                transform-origin: top center;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .feature-graphic {
+                transform: scale(0.4);
+                transform-origin: top center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🎨 Feature Graphic Template - يومي في رمضان</h1>
+        <p><strong>Requirements:</strong> 1024 x 500 pixels | PNG/JPG | No transparency | Max 15MB</p>
+        <p><strong>Instructions:</strong> Choose a template below, toggle guides to check safe zones, then take a screenshot or use design software to recreate it.</p>
+    </div>
+
+    <div class="controls">
+        <button onclick="showTemplate(1)" class="active" id="btn-1">Template 1: Centered</button>
+        <button onclick="showTemplate(2)" id="btn-2">Template 2: Split</button>
+        <button onclick="showTemplate(3)" id="btn-3">Template 3: Dark Overlay</button>
+        <button onclick="toggleGuides()" class="toggle-guides" id="btn-guides">Toggle Safe Zones</button>
+        <button onclick="downloadInfo()" class="download-btn">📥 Download Info</button>
+    </div>
+
+    <div class="canvas-container">
+        <span class="canvas-label">1024 x 500 pixels</span>
+        <div class="feature-graphic" id="canvas">
+            <!-- Template 1 -->
+            <div class="template template-1" id="template-1">
+                <div class="logo-container">
+                    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="120" height="120">
+                        <defs>
+                            <radialGradient id="fg" cx="35%" cy="35%">
+                                <stop offset="0%" stop-color="#F5D88E"/>
+                                <stop offset="100%" stop-color="#D4A84B"/>
+                            </radialGradient>
+                        </defs>
+                        <circle cx="32" cy="26" r="14" fill="url(#fg)"/>
+                        <circle cx="36" cy="24" r="11" fill="#080E1F"/>
+                        <path d="M32 38 Q22 34 18 42 L18 50 Q26 46 32 50" fill="none" stroke="#F5D88E" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M32 38 Q42 34 46 42 L46 50 Q38 46 32 50" fill="none" stroke="#F5D88E" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="title">يومي في رمضان</div>
+                <div class="subtitle">Your Complete Ramadan Companion</div>
+            </div>
+
+            <!-- Template 2 -->
+            <div class="template template-2" id="template-2" style="display: none;">
+                <div class="left">
+                    <div class="pattern"></div>
+                    <div class="crescent">🌙</div>
+                </div>
+                <div class="right">
+                    <div class="title">يومي في رمضان</div>
+                    <div class="features">صلاة · قرآن · أذكار</div>
+                    <div class="subtitle" style="font-size: 24px; color: rgba(255,255,255,0.8);">Track Your Spiritual Journey</div>
+                </div>
+            </div>
+
+            <!-- Template 3 -->
+            <div class="template template-3" id="template-3" style="display: none;">
+                <div class="logo-title">
+                    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100" height="100">
+                        <defs>
+                            <radialGradient id="fg2" cx="35%" cy="35%">
+                                <stop offset="0%" stop-color="#F5D88E"/>
+                                <stop offset="100%" stop-color="#D4A84B"/>
+                            </radialGradient>
+                        </defs>
+                        <circle cx="32" cy="26" r="14" fill="url(#fg2)"/>
+                        <circle cx="36" cy="24" r="11" fill="#080E1F"/>
+                        <path d="M32 38 Q22 34 18 42 L18 50 Q26 46 32 50" fill="none" stroke="#F5D88E" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M32 38 Q42 34 46 42 L46 50 Q38 46 32 50" fill="none" stroke="#F5D88E" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                    <div class="title-group">
+                        <div class="title">يومي في رمضان</div>
+                        <div class="subtitle">YOMY RAMADAN</div>
+                    </div>
+                </div>
+                <div class="tagline">رفيقك الروحي في رمضان المبارك</div>
+            </div>
+
+            <!-- Safe zones (hidden by default) -->
+            <div class="safe-zone safe-zone-50" id="safe-zone-50" style="display: none;"></div>
+            <div class="safe-zone safe-zone-80" id="safe-zone-80" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="info">
+        <h2 style="margin-bottom: 10px;">📝 Next Steps</h2>
+        <ol style="color: #666; line-height: 2; padding-right: 20px;">
+            <li>Choose your favorite template above</li>
+            <li>Use design software (Figma, Photoshop, Canva) to recreate it at 1024 x 500px</li>
+            <li>Customize colors, text, and layout to match your brand</li>
+            <li>Export as PNG with no transparency</li>
+            <li>Save to <code>assets/play-store/feature-graphic.png</code></li>
+            <li>Upload to Google Play Console</li>
+        </ol>
+    </div>
+
+    <script>
+        let currentTemplate = 1;
+        let guidesVisible = false;
+
+        function showTemplate(num) {
+            // Hide all templates
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`template-${i}`).style.display = 'none';
+                document.getElementById(`btn-${i}`).classList.remove('active');
+            }
+            
+            // Show selected template
+            document.getElementById(`template-${num}`).style.display = 'flex';
+            document.getElementById(`btn-${num}`).classList.add('active');
+            currentTemplate = num;
+        }
+
+        function toggleGuides() {
+            guidesVisible = !guidesVisible;
+            const display = guidesVisible ? 'block' : 'none';
+            document.getElementById('safe-zone-50').style.display = display;
+            document.getElementById('safe-zone-80').style.display = display;
+            
+            const btn = document.getElementById('btn-guides');
+            btn.textContent = guidesVisible ? 'Hide Safe Zones' : 'Toggle Safe Zones';
+        }
+
+        function downloadInfo() {
+            const info = `
+GOOGLE PLAY FEATURE GRAPHIC - YOMY RAMADAN
+==========================================
+
+Requirements:
+- Size: 1024 x 500 pixels (exactly)
+- Format: PNG or JPG
+- Aspect ratio: 2:1
+- No transparency
+- Max file size: 15MB
+
+Safe Zones:
+- Content safe zone: 50px from all edges
+- Text safe zone: 80px from all edges
+
+Brand Colors:
+- Primary: #0D7377 (Teal)
+- Accent: #14FFEC (Cyan)
+- Gold: #D4AF37
+- Dark: #1A1A2E
+
+Fonts:
+- Arabic: Amiri (serif) or Cairo (sans-serif)
+- English: Poppins or Montserrat
+
+Save to: assets/play-store/feature-graphic.png
+
+See PLAY_STORE_ASSETS.md for complete guidelines.
+`;
+            
+            const blob = new Blob([info], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'feature-graphic-requirements.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

@@ -108,6 +108,7 @@ For Android/Google Play:
 
 - **In-app logo** — The Setup screen uses the shared SVG logo (crescent moon + book + "يومي في رمضان") from `src/components/AppLogo.tsx`.
 - **Favicon** — `public/logo.svg` is linked in `index.html` as the app favicon.
+- **Play Store assets** — See `PLAY_STORE_ASSETS.md` for complete Google Play Store requirements including feature graphic (1024 x 500px), screenshots, and other promotional assets. Assets are stored in `assets/play-store/`.
 
 ## Capacitor (optional)
 

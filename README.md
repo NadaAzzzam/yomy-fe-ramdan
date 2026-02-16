@@ -93,7 +93,16 @@ The app is tuned for **fast startup** and **small bundle size**:
 - **Non-blocking fonts** — Arabic fonts load async so they don’t block first paint.
 - **Small assets** — Inline limit 1 KB; larger assets get separate files and hashed names for caching.
 
-For Android/Google Play, run `npm run build`, then `npx cap sync` and open in Android Studio. The same `dist/` output is used so you get the same optimizations.
+For Android/Google Play:
+
+- **رفع للإنتاج (Release / Upload):** استخدم production واخرج Bundle للرفع على المتجر:
+  ```bash
+  npm run bundle:android
+  ```
+  هذا الأمر يبني المشروع كـ **production** (بدون debug)، يزامن مع Android، ثم ينتج **App Bundle (AAB)** جاهز للرفع على Google Play.  
+  الملف الناتج يُنسخ تلقائياً إلى: **`release/app-release.aab`** (بجانب المشروع في مجلد `release/`)
+
+- **تطوير:** `npm run build:android` ثم `npx cap open android` لفتح Android Studio. نفس إخراج `dist/` يُستخدم مع كل التحسينات.
 
 ## Logo & Google Play assets (SVG)
 

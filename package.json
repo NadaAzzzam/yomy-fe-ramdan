@@ -11,7 +11,10 @@
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
     "build:android": "npm run build && cap sync android",
-    "icons:generate": "capacitor-assets generate --android --iconBackgroundColor \"#080E1F\" --iconBackgroundColorDark \"#080E1F\" --splashBackgroundColor \"#080E1F\" --splashBackgroundColorDark \"#080E1F\""
+    "build:android:release": "npm run build && cap sync android",
+    "bundle:android": "npm run build:android:release && node scripts/bundle-android.js",
+    "icons:generate": "capacitor-assets generate --android --iconBackgroundColor \"#080E1F\" --iconBackgroundColorDark \"#080E1F\" --splashBackgroundColor \"#080E1F\" --splashBackgroundColorDark \"#080E1F\"",
+    "play-store:icon": "node scripts/export-play-store-icon.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
@@ -26,6 +29,7 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
+    "sharp": "^0.33.5",
     "@capacitor/cli": "^7.5.0",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",

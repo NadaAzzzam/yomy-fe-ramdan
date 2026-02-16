@@ -2,21 +2,22 @@
 
 ## What You Need
 
-Ahmed Ramzy shared the official requirements for the **Google Play Store Feature Graphic** - the banner image that appears when your app is featured by Google.
+shared the official requirements for the **Google Play Store Feature Graphic** - the banner image that appears when your app is featured by Google.
 
 ## ✅ Requirements Checklist
 
-| Requirement | Value |
-|------------|-------|
-| **Size** | 1024 x 500 pixels |
-| **Format** | JPG or PNG |
-| **Aspect Ratio** | 2:1 |
-| **Transparency** | NOT allowed |
-| **Max File Size** | 15MB |
+| Requirement       | Value             |
+| ----------------- | ----------------- |
+| **Size**          | 1024 x 500 pixels |
+| **Format**        | JPG or PNG        |
+| **Aspect Ratio**  | 2:1               |
+| **Transparency**  | NOT allowed       |
+| **Max File Size** | 15MB              |
 
 ## 🎯 Where It Appears
 
 ✨ **When your app is featured by Google:**
+
 - At the top of your Play Store listing
 - In promotional sections
 - In curated collections
@@ -27,24 +28,29 @@ Ahmed Ramzy shared the official requirements for the **Google Play Store Feature
 I've created a complete guide for you:
 
 ### 1. **Main Documentation**
+
 - `PLAY_STORE_ASSETS.md` - Complete guide with all requirements, design tips, and best practices
 
 ### 2. **Quick References**
+
 - `QUICK_REFERENCE.txt` - One-page cheat sheet with all specs
 - `DESIGN_SPECS.md` - Detailed design specifications, layout grids, and export settings
 
 ### 3. **Template**
+
 - `feature-graphic-template.html` - Interactive HTML template with 3 design options
   - Open in browser to preview different layouts
   - Toggle safe zones to check content placement
   - Based on your existing logo and brand
 
 ### 4. **Folder Structure**
+
 - `README.md` - Checklist and notes for this folder
 
 ## 🚀 Quick Start
 
 ### Option 1: Use the Interactive Template
+
 ```bash
 # Open the HTML template in your browser
 start assets/play-store/feature-graphic-template.html
@@ -70,12 +76,14 @@ start assets/play-store/feature-graphic-template.html
 ## 🎨 Design Suggestions for Yomy Ramadan
 
 ### Colors
+
 - **Primary**: #0D7377 (Teal) - Your brand color
 - **Accent**: #14FFEC (Cyan) - Highlights
 - **Gold**: #D4AF37 - Islamic/Ramadan accent
 - **Dark**: #1A1A2E - Background option
 
 ### Elements to Include
+
 - 🌙 Crescent moon (from your logo)
 - 📖 Book (from your logo)
 - ⭐ Stars or Islamic patterns
@@ -83,6 +91,7 @@ start assets/play-store/feature-graphic-template.html
 - Brief tagline about features
 
 ### Layout Ideas
+
 1. **Centered**: Logo + App name + Tagline (simple, clean)
 2. **Split**: Islamic pattern on left, text on right
 3. **Overlay**: Full background with text overlay
@@ -104,6 +113,7 @@ start assets/play-store/feature-graphic-template.html
 ## 📚 Additional Resources
 
 See the other files in this folder for:
+
 - Complete design guidelines
 - Export settings for different tools
 - Typography and color recommendations
@@ -113,6 +123,7 @@ See the other files in this folder for:
 ## 💡 Need Help?
 
 If you need assistance:
+
 1. Share your preferred design direction
 2. Let me know if you want to use specific colors
 3. Tell me what text you want to include

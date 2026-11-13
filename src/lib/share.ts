@@ -68,7 +68,7 @@ export function buildHadithImageBlob(options: {
   source?: string;
   isDark?: boolean;
 }): Promise<Blob> {
-  const { title, body, source = "", isDark = true } = options;
+  const { title, body, source = "" } = options;
   const canvas = document.createElement("canvas");
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const ctx = canvas.getContext("2d");

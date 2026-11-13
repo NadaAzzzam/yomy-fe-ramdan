@@ -225,7 +225,7 @@ export function Home({ state, dispatch }: HomeProps) {
     info.phase === "pre"
       ? `باقي ${info.daysTo} يوم على رمضان`
       : info.phase === "ramadan"
-      ? `${info.day} رمضان ١٤٤٧`
+      ? `${info.day} رمضان ${hijri.year.toLocaleString('ar-EG', { useGrouping: false })}`
       : "رمضان كريم — استمر!";
 
   const ibadaColor = t[todayIbada.color];

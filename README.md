@@ -39,6 +39,15 @@ npm run build
 npm preview
 ```
 
+## Tests
+
+- `npm test` — unit regressions for Hijri dates, Ramadan, persistence and daily progress.
+- `npm run typecheck` — TypeScript validation.
+- `npx playwright install chromium --only-shell` then `npm run test:e2e` — mobile viewport browser tests.
+- Browser tests cover onboarding, theme controls, page loading and midnight rollover. Native notification permissions/delivery, audio, sharing and background/resume behavior require Android device testing.
+
+Hijri dates use the offline Umm al-Qura calendar in the device's local timezone. Local moon-sighting announcements may differ by one day. Ramadan dates and month length are calculated each year.
+
 ## Project structure
 
 ```

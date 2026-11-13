@@ -1,22 +1,24 @@
-const RAMADAN_START = new Date(2026, 1, 18);
+import { getHijriDate } from './hijri';
 
 export type RamadanPhase = 'pre' | 'ramadan' | 'post';
 
-export function getRamadanInfo(): {
-  phase: RamadanPhase;
-  daysTo: number;
-  day: number;
-  remaining: number;
+export function getRamadanInfo(now: Date = new Date()): {
+  phase: RamadanPhase; daysTo: number; day: number; remaining: number;
 } {
-  const now = new Date();
-  const ms = 86400000;
-  if (now < RAMADAN_START) {
-    const d = Math.ceil((RAMADAN_START.getTime() - now.getTime()) / ms);
-    return { phase: 'pre', daysTo: d, day: 0, remaining: 30 };
+  const h = getHijriDate(now);
+  const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
+  if (h.month === 9) {
+    let remaining = 0;
+    do { cursor.setDate(cursor.getDate() + 1); remaining++; }
+    while (getHijriDate(cursor).month === 9);
+    return { phase: 'ramadan', daysTo: 0, day: h.day, remaining: remaining - 1 };
   }
-  const d = Math.floor((now.getTime() - RAMADAN_START.getTime()) / ms) + 1;
-  if (d > 30) return { phase: 'post', day: 30, remaining: 0 };
-  return { phase: 'ramadan', day: d, remaining: 30 - d };
+  let daysTo = 0;
+  while (getHijriDate(cursor).month !== 9) {
+    cursor.setDate(cursor.getDate() + 1);
+    daysTo++;
+  }
+  return { phase: h.month < 9 ? 'pre' : 'post', daysTo, day: 0, remaining: 0 };
 }
 
 export function getMoonPhase(day: number): number {

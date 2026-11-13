@@ -301,7 +301,7 @@ function loadState(): AppState | null {
     const parsed = JSON.parse(raw) as unknown;
     if (!isPlainObject(parsed)) return null;
     const def = defaultState();
-    const dailyPages = typeof parsed.dailyPages === 'number' ? parsed.dailyPages : def.dailyPages;
+    const dailyPages = typeof parsed.dailyPages === 'number' && Number.isFinite(parsed.dailyPages) && parsed.dailyPages > 0 ? Math.floor(parsed.dailyPages) : def.dailyPages;
     const readingTimes = Array.isArray(parsed.readingTimes)
       ? parsed.readingTimes.filter(
         (t: unknown) => isPlainObject(t) && typeof t.label === 'string' && typeof t.icon === 'string'
@@ -372,7 +372,11 @@ function loadState(): AppState | null {
       duas: Array.isArray(parsed.duas)
         ? parsed.duas.filter(
           (d: unknown) => isPlainObject(d) && typeof (d as { text?: unknown }).text === 'string' && typeof (d as { day?: unknown }).day === 'string'
-        ).map((d: { text: string; day: string }) => ({ text: d.text, day: d.day }))
+        ).map((d: DuaItem) => ({ text: d.text, day: d.day,
+          category: typeof d.category === 'string' ? d.category : undefined,
+          answered: typeof d.answered === 'boolean' ? d.answered : undefined,
+          answeredDate: typeof d.answeredDate === 'string' ? d.answeredDate : undefined,
+        }))
         : def.duas,
       subha: isPlainObject(parsed.subha)
         ? { ...def.subha, ...parsed.subha } as SubhaCounts
@@ -568,7 +572,8 @@ export function buildDailySnapshot(s: AppState): DailySnapshot {
 export function reducer(s: AppState, a: Action): AppState {
   switch (a.type) {
     case 'SET_PAGES': {
-      const newDaily = a.v;
+      if (!Number.isFinite(a.v) || a.v < 1) return s;
+      const newDaily = Math.floor(a.v);
       const ps = Math.ceil(newDaily / Math.max(1, s.readingTimes.length));
       const newSlots =
         s.todaySlots.length === s.readingTimes.length

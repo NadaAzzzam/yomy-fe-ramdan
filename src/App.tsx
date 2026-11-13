@@ -10,6 +10,7 @@ import { Star } from './components/Star';
 import { PageLoader } from './components/PageLoader';
 import { initState, reducer, saveState, buildDailySnapshot } from './lib/state';
 import { scheduleNotifications, setupNotificationListeners } from './lib/notifications';
+import { useAzanScheduler } from './lib/azan';
 import { getRamadanInfo } from './lib/ramadan';
 import type { AppState } from './lib/state';
 import type { Action } from './lib/state';
@@ -176,30 +177,34 @@ function AppContent() {
   const history = useHistory();
   const [state, setState] = useState<AppState>(initState);
   const dispatch = useCallback((a: Action) => setState((p) => reducer(p, a)), []);
+  useAzanScheduler(state);
 
   useEffect(() => {
     saveState(state);
   }, [state]);
 
-  // Day rollover: when date changes, archive previous day and reset today
+  // Recheck local date while open and immediately after returning from background.
   useEffect(() => {
-    const now = new Date();
-    const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-    if (!state.lastSeenDate) {
-      dispatch({ type: 'SET_LAST_SEEN_DATE', date: today });
-      return;
-    }
-    if (state.lastSeenDate < today) {
-      const snapshot = buildDailySnapshot(state);
-      dispatch({
-        type: 'ARCHIVE_AND_ROLLOVER',
-        archivedDate: state.lastSeenDate,
-        snapshot,
-        newDate: today,
+    const checkDate = () => setState(previous => {
+      const now = new Date();
+      const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      if (!previous.lastSeenDate) return reducer(previous, { type: 'SET_LAST_SEEN_DATE', date: today });
+      if (previous.lastSeenDate >= today) return previous;
+      return reducer(previous, {
+        type: 'ARCHIVE_AND_ROLLOVER', archivedDate: previous.lastSeenDate,
+        snapshot: buildDailySnapshot(previous), newDate: today,
       });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- only run when lastSeenDate or dispatch changes; state is read for snapshot when rolling over
-  }, [state.lastSeenDate, dispatch]);
+    });
+    checkDate();
+    const timer = window.setInterval(checkDate, 1000);
+    window.addEventListener('focus', checkDate);
+    document.addEventListener('visibilitychange', checkDate);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', checkDate);
+      document.removeEventListener('visibilitychange', checkDate);
+    };
+  }, []);
 
   useEffect(() => {
     const ramInfo = getRamadanInfo();

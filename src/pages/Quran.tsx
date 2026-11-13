@@ -25,7 +25,6 @@ function toArabicNum(n: number): string {
     .join("");
 }
 
-const BISMILLAH = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ";
 
 type QuranProps = { state: AppState; dispatch: (a: Action) => void };
 
@@ -33,7 +32,6 @@ type QuranProps = { state: AppState; dispatch: (a: Action) => void };
 function PageReader({
   pageNum,
   onPageChange,
-  state,
   dispatch,
   previousPage,
 }: {

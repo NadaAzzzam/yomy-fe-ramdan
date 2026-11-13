@@ -19,10 +19,10 @@ import {
   formatTime12h,
   playAzan,
   stopAzan,
-  isAzanPlaying,
   isAzanCached,
   downloadAzanForOffline,
 } from '../lib/api';
+import { getAzanStatus, isAndroidAzan, openAzanSettings } from '../lib/azan';
 import type { AppState, Action } from '../lib/state';
 
 type SalahProps = { state: AppState; dispatch: (a: Action) => void };
@@ -240,6 +240,7 @@ function AzanSoundItem({
   const t = useTheme();
   const isDark = useIsDark();
   const [playing, setPlaying] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cached, setCached] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -255,11 +256,17 @@ function AzanSoundItem({
       stopAzan();
       setPlaying(false);
     } else {
+      setAudioLoading(true);
       playAzan(sound.url).then((audio) => {
+        setAudioLoading(false);
         if (audio) {
           setPlaying(true);
           audio.addEventListener('ended', () => setPlaying(false));
           audio.addEventListener('pause', () => setPlaying(false));
+          audio.addEventListener('error', () => {
+            setPlaying(false);
+            setErrorMsg('انقطع الصوت — حاول مرة أخرى');
+          });
           isAzanCached(sound.url).then(setCached);
         } else {
           setPlaying(false);
@@ -377,6 +384,9 @@ function AzanSoundItem({
       {/* Preview / play button */}
       <button
         onClick={handlePreview}
+        disabled={audioLoading}
+        aria-label={playing ? 'إيقاف الأذان' : 'معاينة الأذان'}
+        aria-busy={audioLoading}
         style={{
           width: 36,
           height: 36,
@@ -392,7 +402,7 @@ function AzanSoundItem({
           flexShrink: 0,
         }}
       >
-        {playing ? '⏹️' : '▶️'}
+        {audioLoading ? '⏳' : playing ? '⏹️' : '▶️'}
       </button>
       {errorMsg && (
         <p
@@ -435,6 +445,13 @@ export function Salah({ state, dispatch }: SalahProps) {
   );
 
   const [now, setNow] = useState(new Date());
+  const [azanStatus, setAzanStatus] = useState(getAzanStatus);
+  useEffect(() => {
+    const update = () => setAzanStatus(getAzanStatus());
+    window.addEventListener('azan-status', update);
+    update();
+    return () => window.removeEventListener('azan-status', update);
+  }, []);
   const [showLocationEdit, setShowLocationEdit] = useState(false);
   const [cityInput, setCityInput] = useState(state.prayerCity);
   const [countryInput, setCountryInput] = useState(state.prayerCountry);
@@ -967,7 +984,9 @@ export function Salah({ state, dispatch }: SalahProps) {
               }}
             >
               <Sec icon="🔊" text="صوت الأذان" />
-              <div
+              <button
+                aria-label="تشغيل الأذان تلقائياً"
+                aria-pressed={state.azanEnabled}
                 onClick={() => dispatch({ type: 'SET_AZAN_ENABLED', enabled: !state.azanEnabled })}
                 onKeyDown={(e) =>
                   e.key === 'Enter' && dispatch({ type: 'SET_AZAN_ENABLED', enabled: !state.azanEnabled })
@@ -976,8 +995,10 @@ export function Salah({ state, dispatch }: SalahProps) {
                 tabIndex={0}
                 style={{
                   width: 48,
-                  height: 26,
-                  borderRadius: 13,
+                  height: 44,
+                  border: 'none',
+                  padding: 0,
+                  borderRadius: 22,
                   background: state.azanEnabled
                     ? `linear-gradient(90deg, ${t.green}, ${t.accent})`
                     : `${t.muted}30`,
@@ -994,13 +1015,14 @@ export function Salah({ state, dispatch }: SalahProps) {
                     borderRadius: '50%',
                     background: '#fff',
                     position: 'absolute',
-                    top: 3,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
                     left: state.azanEnabled ? 25 : 3,
                     transition: 'left .3s',
                     boxShadow: '0 1px 4px rgba(0,0,0,.2)',
                   }}
                 />
-              </div>
+              </button>
             </div>
 
             <p style={{ fontSize: 11, color: t.muted, margin: '0 0 10px', lineHeight: 1.6 }}>
@@ -1011,6 +1033,11 @@ export function Salah({ state, dispatch }: SalahProps) {
 
             {state.azanEnabled && (
               <div style={{ animation: 'fadeIn .3s' }}>
+                <p role="status" style={{ color: t.textSec, fontSize: 12, lineHeight: 1.8 }}>{azanStatus}</p>
+                {isAndroidAzan() && <button onClick={() => { void openAzanSettings().catch(() => setAzanStatus('افتح إعدادات التطبيق واسمح بالإشعارات والمنبهات')); }}
+                  style={{ width: '100%', padding: 10, marginBottom: 12, borderRadius: 12, border: `1px solid ${t.accent}50`, background: `${t.accent}15`, color: t.text }}>
+                  إعداد أذونات الأذان
+                </button>}
                 {AZAN_SOUNDS.map((sound) => (
                   <AzanSoundItem
                     key={sound.id}

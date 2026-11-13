@@ -393,6 +393,7 @@ const AZAN_CACHE_NAME = 'yomy-azan-v1';
 
 let currentAudio: HTMLAudioElement | null = null;
 let currentBlobUrl: string | null = null;
+let playbackRequest = 0;
 
 function openAzanCache(): Promise<Cache | null> {
   if (typeof caches === 'undefined') return Promise.resolve(null);
@@ -417,14 +418,23 @@ export async function getCachedAzanBlobUrl(url: string): Promise<string | null> 
 export async function downloadAzanForOffline(url: string): Promise<boolean> {
   const cache = await openAzanCache();
   if (!cache) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
   try {
     const fetchUrl = getAzanFetchUrl(url);
-    const res = await fetch(fetchUrl);
+    const res = await fetch(fetchUrl, { signal: controller.signal });
     if (!res.ok) return false;
-    await cache.put(url, res);
+    const blob = await res.blob();
+    // A dev-server fallback/error page is not a successfully downloaded azan.
+    if (!blob.size || /text\/|json|html/i.test(blob.type)) return false;
+    await cache.put(url, new Response(blob, {
+      headers: { 'Content-Type': blob.type || 'audio/mpeg' },
+    }));
     return true;
   } catch {
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -432,8 +442,12 @@ export async function downloadAzanForOffline(url: string): Promise<boolean> {
 export async function isAzanCached(url: string): Promise<boolean> {
   const cache = await openAzanCache();
   if (!cache) return false;
-  const res = await cache.match(url);
-  return res != null && res.ok;
+  try {
+    const res = await cache.match(url);
+    return res != null && res.ok;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -465,64 +479,67 @@ async function resolveAzanPlayUrl(url: string): Promise<{ url: string; isBlob: b
  * or null if playback failed.
  */
 export function playAzan(url: string): Promise<HTMLAudioElement | null> {
+  stopAzan();
+  const request = playbackRequest;
   return new Promise((resolve) => {
-    (async () => {
-      try {
-        stopAzan();
-        const { url: playUrl, isBlob } = await resolveAzanPlayUrl(url);
-        if (isBlob) currentBlobUrl = playUrl;
-
-        const audio = new Audio(playUrl);
-        audio.volume = 1.0;
-        currentAudio = audio;
-
-        const cleanup = () => {
-          audio.removeEventListener('error', onError);
-          if (currentAudio === audio) currentAudio = null;
-          if (currentBlobUrl === playUrl && isBlob) {
-            URL.revokeObjectURL(playUrl);
-            currentBlobUrl = null;
-          }
-        };
-
-        const onError = () => {
-          cleanup();
-          stopAzan();
-          resolve(null);
-        };
-
-        audio.addEventListener('error', onError);
-        audio.addEventListener('ended', () => {
-          if (currentAudio === audio) currentAudio = null;
-          if (currentBlobUrl === playUrl && isBlob) {
-            URL.revokeObjectURL(playUrl);
-            currentBlobUrl = null;
-          }
-        });
-
-        audio.play().then(() => {
-          audio.removeEventListener('error', onError);
-          resolve(audio);
-        }).catch(() => {
-          onError();
-        });
-      } catch {
-        resolve(null);
+    let audio: HTMLAudioElement | null = null;
+    let blobUrl: string | null = null;
+    let settled = false;
+    const finish = (result: HTMLAudioElement | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const cleanup = () => {
+      if (audio) {
+        audio.pause();
+        if (currentAudio === audio) currentAudio = null;
       }
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        if (currentBlobUrl === blobUrl) currentBlobUrl = null;
+        blobUrl = null;
+      }
+    };
+    const fail = () => { cleanup(); finish(null); };
+    const timer = setTimeout(() => {
+      if (request === playbackRequest) playbackRequest++;
+      fail();
+    }, 15000);
+    void (async () => {
+      try {
+        const source = await resolveAzanPlayUrl(url);
+        if (source.isBlob) blobUrl = source.url;
+        if (request !== playbackRequest || settled) { fail(); return; }
+        audio = new Audio(source.url);
+        audio.preload = 'auto';
+        audio.volume = 1;
+        currentAudio = audio;
+        currentBlobUrl = blobUrl;
+        audio.addEventListener('error', fail, { once: true });
+        audio.addEventListener('ended', cleanup, { once: true });
+        audio.addEventListener('pause', () => finish(null), { once: true });
+        await audio.play();
+        if (request !== playbackRequest) { fail(); return; }
+        finish(audio);
+      } catch { fail(); }
     })();
   });
 }
 
-/** Stop currently playing azan */
+/** Stop playback and invalidate pending loads before releasing their source. */
 export function stopAzan(): void {
+  playbackRequest++;
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.removeAttribute('src');
+    currentAudio.load();
+    currentAudio = null;
+  }
   if (currentBlobUrl) {
     URL.revokeObjectURL(currentBlobUrl);
     currentBlobUrl = null;
-  }
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.currentTime = 0;
-    currentAudio = null;
   }
 }
 

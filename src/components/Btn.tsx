@@ -30,6 +30,7 @@ export function Btn({
       : "#fff";
   return (
     <IonButton
+      className="app-button"
       onClick={onClick}
       disabled={disabled}
       fill="solid"
@@ -39,7 +40,17 @@ export function Btn({
           : `linear-gradient(135deg,${c},${c}BB)`,
         color: tc,
         borderRadius: small ? 12 : 16,
-        padding: small ? "8px 16px" : "14px 24px",
+        "--padding-top": small ? "8px" : "14px",
+        "--padding-bottom": small ? "8px" : "14px",
+        "--padding-start": small ? "12px" : "20px",
+        "--padding-end": small ? "12px" : "20px",
+        "--border-radius": small ? "12px" : "16px",
+        "--background": "transparent",
+        height: "auto",
+        minHeight: 44,
+        minWidth: 0,
+        maxWidth: "100%",
+        whiteSpace: "normal",
         fontSize: small ? 12 : 15,
         fontWeight: 700,
         boxShadow: disabled ? "none" : `0 3px 16px ${c}44`,

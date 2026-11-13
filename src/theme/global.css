@@ -236,6 +236,27 @@ body {
   min-width: 0;
 }
 
+/* Readable forms and resilient layouts at narrow widths and enlarged text. */
+.ion-content-inner { overflow-wrap: anywhere; }
+.ion-content-inner input,
+.ion-content-inner select,
+.ion-content-inner textarea { font-size: 16px !important; }
+.ion-content-inner img,
+.ion-content-inner svg { max-width: 100%; }
+button:focus-visible, [role="button"]:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--ion-text-color);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+@media (min-width: 768px) {
+  #app-main-tab-bar { max-width: 600px; margin-inline: auto; border-radius: 20px 20px 0 0; }
+}
+@media (orientation: landscape) {
+  ion-tab-bar { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+}
 /* ─── Smooth theme transitions for all themed elements ─── */
 .theme-card,
 .theme-bg {
@@ -418,7 +439,37 @@ h4 {
   overflow-wrap: break-word;
 }
 
-/* Ensure buttons don't overflow */
-.ion-content-inner button {
+/* Let controls shrink within narrow flex rows and wrap long Arabic labels. */
+.ion-content-inner button,
+.ion-content-inner input,
+.ion-content-inner select,
+.ion-content-inner textarea,
+.ion-content-inner ion-button {
+  min-width: 0;
   max-width: 100%;
 }
+.ion-content-inner button {
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.app-button::part(native) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  height: auto;
+  min-height: 44px;
+}
+ion-tab-button {
+  min-width: 0;
+}
+ion-tab-button ion-label {
+  white-space: normal;
+}
+/* Keep landscape content clear of the actual 56px fixed tab bar. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .ion-content-inner {
+    padding-bottom: calc(56px + 20px + var(--safe-area-inset-bottom));
+  }
+}
+

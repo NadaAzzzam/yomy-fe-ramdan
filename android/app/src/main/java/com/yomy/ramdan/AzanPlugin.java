@@ -16,6 +16,8 @@ import java.util.concurrent.Executors;
 public class AzanPlugin extends Plugin {
     static final String PREFS = "azan";
     static final int LIMIT = 155;
+    private final java.util.concurrent.atomic.AtomicInteger generation = new java.util.concurrent.atomic.AtomicInteger();
+    private static final java.util.concurrent.ExecutorService IO = Executors.newSingleThreadExecutor();
 
     @PluginMethod public void status(PluginCall call) {
         AlarmManager manager = getContext().getSystemService(AlarmManager.class);
@@ -27,10 +29,14 @@ public class AzanPlugin extends Plugin {
         Intent intent = Build.VERSION.SDK_INT >= 31
             ? new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getContext().getPackageName()))
             : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
+        if (Build.VERSION.SDK_INT >= 33 && getContext().checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
+        }
         getActivity().startActivity(intent);
         call.resolve();
     }
     @PluginMethod public void cancel(PluginCall call) {
+        generation.incrementAndGet();
         clear(getContext());
         getContext().getSharedPreferences(PREFS, 0).edit().clear().apply();
         getContext().stopService(new Intent(getContext(), AzanService.class));
@@ -43,7 +49,8 @@ public class AzanPlugin extends Plugin {
         if (url == null || !url.matches("https://cdn\\.aladhan\\.com/audio/adhans/[a-zA-Z0-9_-]+\\.mp3") || alarms == null || alarms.length() > LIMIT) {
             call.reject("Invalid azan schedule"); return;
         }
-        Executors.newSingleThreadExecutor().execute(() -> {
+        int token = generation.incrementAndGet();
+        IO.execute(() -> {
             File pending = new File(getContext().getFilesDir(), "azan-download.tmp");
             try {
                 File audio = new File(getContext().getFilesDir(), "azan-" + Uri.parse(url).getLastPathSegment());
@@ -68,6 +75,7 @@ public class AzanPlugin extends Plugin {
                 }
                 AlarmManager manager = getContext().getSystemService(AlarmManager.class);
                 if (Build.VERSION.SDK_INT >= 31 && !manager.canScheduleExactAlarms()) throw new SecurityException("Allow alarms and reminders");
+                if (token != generation.get()) { call.reject("Cancelled"); return; }
                 clear(getContext());
                 getContext().getSharedPreferences(PREFS, 0).edit()
                     .putString("alarms", alarms.toString()).putString("audio", audio.getAbsolutePath()).commit();

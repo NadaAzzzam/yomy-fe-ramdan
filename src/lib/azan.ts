@@ -40,6 +40,9 @@ export function useAzanScheduler(state: AppState) {
     let disposed = false;
     let alarms: Alarm[] = [];
     let lastPlayed = 0;
+    if (!state.azanEnabled && isAndroidAzan()) {
+      void NativeAzan.cancel().catch(() => {});
+    }
     const sound = AZAN_SOUNDS.find(s => s.id === state.selectedAzan) ?? AZAN_SOUNDS[0];
     const report = (message: string) => { azanStatus = message; window.dispatchEvent(new CustomEvent('azan-status', { detail: message })); };
     const refresh = async () => {
@@ -104,8 +107,15 @@ export function useAzanScheduler(state: AppState) {
         }
       }
     }, 1000);
+    const onVisible = () => { if (document.visibilityState === 'visible') onFocus(); };
     window.addEventListener('focus', onFocus);
-    return () => { disposed = true; clearInterval(timer); window.removeEventListener('focus', onFocus); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [state.azanEnabled, state.selectedAzan, state.prayerCity, state.prayerCountry, state.prayerMethod, state.prayerLatitude, state.prayerLongitude, state.lastSeenDate]);
 }
 let azanQueue: Promise<unknown> = Promise.resolve();

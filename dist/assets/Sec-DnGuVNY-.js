@@ -1,0 +1,1 @@
+import{j as r}from"./vendor-DeIjcWfl.js";import{u as s}from"./index-B53DsWGy.js";function m({icon:t,text:o}){const e=s();return r.jsxs("p",{style:{fontSize:13,color:e.goldLight,margin:"0 0 10px",fontWeight:700},children:[t," ",o]})}export{m as S};

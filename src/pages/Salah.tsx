@@ -294,7 +294,12 @@ function AzanSoundItem({
   return (
     <div
       onClick={onSelect}
-      onKeyDown={(e) => e.key === 'Enter' && onSelect()}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
       role="button"
       tabIndex={0}
       style={{

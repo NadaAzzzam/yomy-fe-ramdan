@@ -48,6 +48,15 @@ npm preview
 
 Hijri dates use the offline Umm al-Qura calendar in the device's local timezone. Local moon-sighting announcements may differ by one day. Ramadan dates and month length are calculated each year.
 
+## Automatic azan
+
+- Android uses a registered Capacitor plugin, exact alarms, and a private foreground audio service. The selected recording is downloaded to internal app storage before scheduling, so playback does not need a live WebView or network connection.
+- Open **صلاتي → صوت الأذان → إعداد أذونات الأذان** and allow notifications plus Alarms & reminders. Check the status message for successful scheduling.
+- Five prayers are scheduled for the next 30 days (sunrise is excluded), refreshed when the app opens/resumes or location, method, or sound changes. Reopen the app within 30 days to renew the schedule. Future alarms are restored after reboot; force-stopping the app requires reopening it.
+- The notification includes **إيقاف**. Playback respects alarm volume and system audio focus. Browser/iOS fallback only attempts playback while the page is visible; background automatic azan is currently Android-only.
+- After source changes, run `npm run build:android` before building/installing Android.
+- Device acceptance check: enable permissions, verify scheduled status, background/lock the device over a prayer time, verify the selected sound and Stop action, then verify disabling azan cancels future playback and reboot restores future alarms.
+
 ## Project structure
 
 ```
